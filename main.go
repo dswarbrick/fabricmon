@@ -18,21 +18,38 @@ import "C"
 import (
 	"fmt"
 	"os"
+	"sync"
 	"unsafe"
 )
 
 type Fabric struct {
+	mutex      sync.RWMutex
 	ibndFabric *C.struct_ibnd_fabric
 	ibmadPort  *C.struct_ibmad_port
+}
+
+// iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only swtich
+// nodes
+func iterateSwitches(f *Fabric, nnMap *NodeNameMap) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	for node := f.ibndFabric.nodes; node != nil; node = node.next {
+		if node._type == C.IB_NODE_SWITCH {
+			fmt.Printf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x\n\n",
+				node._type, nnMap.remapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
+				node.numports, node.guid)
+		}
+	}
 }
 
 func main() {
 	caNames, _ := getCANames()
 
+	nnMap, _ := NewNodeNameMap()
+
 	for _, caName := range caNames {
 		var ca C.umad_ca_t
-
-		fmt.Printf("umad_get_ca(\"%s\")\n", caName)
 
 		// Pointer to char array will be allocated on C heap; must free pointer explicitly
 		ca_name := C.CString(caName)
@@ -74,11 +91,18 @@ func main() {
 
 			fmt.Printf("ibmad_port: %#v\n", fabric.ibmadPort)
 
+			// Walk switch nodes in fabric
+			iterateSwitches(&fabric, &nnMap)
+
+			fabric.mutex.Lock()
+
 			// Close MAD port
 			C.mad_rpc_close_port(fabric.ibmadPort)
 
 			// Free memory and resources associated with fabric
 			C.ibnd_destroy_fabric(fabric.ibndFabric)
+
+			fabric.mutex.Unlock()
 		}
 
 		C.free(unsafe.Pointer(ca_name))
