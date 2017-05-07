@@ -52,22 +52,22 @@ d3.json(fabric + ".json", function(error, graph) {
         .on("end", dragended));
 
   node.append("image")
-      .attr("xlink:href", function(d) {
-        if (d.nodetype == 2) {
-          return "img/switch.svg";
-        } else if (d.nodetype == 3) {
-          return "img/router.svg";
-        } else {
-          for (var i = 0; i < nodeImageMap.length; i++) {
-            if (nodeImageMap[i][0].test(d.desc))
-              return nodeImageMap[i][1];
-          }
+    .attr("xlink:href", function(d) {
+      if (d.nodetype == 2) {
+        return "img/switch.svg";
+      } else if (d.nodetype == 3) {
+        return "img/router.svg";
+      } else {
+        for (var i = 0; i < nodeImageMap.length; i++) {
+          if (nodeImageMap[i][0].test(d.desc))
+            return nodeImageMap[i][1];
         }
-      })
-      .attr("x", -8)
-      .attr("y", -8)
-      .attr("width", 16)
-      .attr("height", 16);
+      }
+    })
+    .attr("x", -8)
+    .attr("y", -8)
+    .attr("width", 16)
+    .attr("height", 16);
 
   node.append("text")
     .attr("dx", 12)

@@ -53,14 +53,6 @@ func log2b(x uint) uint {
 	return bitLen(x) - 1
 }
 
-// ntohll converts a uint64 from network byte order to host byte order
-func ntohll(x uint64) uint64 {
-	if nativeEndian == binary.LittleEndian {
-		return swapUint64(x)
-	}
-	return x
-}
-
 // ntohs converts a uint16 from network byte order to host byte order
 func ntohs(x uint16) uint16 {
 	if nativeEndian == binary.LittleEndian {
@@ -69,8 +61,29 @@ func ntohs(x uint16) uint16 {
 	return x
 }
 
+// ntohll converts a uint32 from network byte order to host byte order
+func ntohl(x uint32) uint32 {
+	if nativeEndian == binary.LittleEndian {
+		return swapUint32(x)
+	}
+	return x
+}
+
+// ntohll converts a uint64 from network byte order to host byte order
+func ntohll(x uint64) uint64 {
+	if nativeEndian == binary.LittleEndian {
+		return swapUint64(x)
+	}
+	return x
+}
+
 func swapUint16(n uint16) uint16 {
 	return (n&0x00ff)<<8 | (n&0xff00)>>8
+}
+
+func swapUint32(n uint32) uint32 {
+	return (n&0x000000ff)<<24 | (n&0x0000ff00)<<8 |
+		(n&0x00ff0000)>>8 | (n&0xff000000)>>24
 }
 
 func swapUint64(n uint64) uint64 {
