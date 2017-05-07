@@ -7,7 +7,7 @@
   <g fill="#fff">
     <g id="arrow">
       <rect height="40" width="20" y="40" x="90"/>
-      <polygon points="70,40 100,10 130,40"/>
+      <polygon points="75,40 100,10 125,40"/>
     </g>
     <use href="#arrow" transform="scale(-1) translate(-200 -200)"/>
     <use href="#arrow" transform="rotate(270 100 100) translate(0 100)"/>
