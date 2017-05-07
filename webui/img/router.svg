@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" height="200" width="200" version="1.1">
+  <title>Router</title>
+  <g fill="#000">
+    <circle cx="100" cy="100" r="100"/>
+  </g>
+  <g fill="#fff">
+    <g id="arrow">
+      <rect height="40" width="20" y="40" x="90"/>
+      <polygon points="70,40 100,10 130,40"/>
+    </g>
+    <use href="#arrow" transform="scale(-1) translate(-200 -200)"/>
+    <use href="#arrow" transform="rotate(270 100 100) translate(0 100)"/>
+    <use href="#arrow" transform="rotate(90 100 100) translate(0 100)"/>
+ </g>
+</svg>
