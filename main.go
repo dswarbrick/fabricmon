@@ -51,9 +51,28 @@ var stdCounterMap = map[uint32]string{
 	C.IB_PC_XMT_WAIT_F:       "PortXmitWait", // Requires cap mask IB_PM_PC_XMIT_WAIT_SUP
 }
 
+// Extended (64-bit) counters and their display names
+var extCounterMap = map[uint32]string{
+	C.IB_PC_EXT_XMT_BYTES_F: "PortXmitData",
+	C.IB_PC_EXT_RCV_BYTES_F: "PortRcvData",
+	C.IB_PC_EXT_XMT_PKTS_F:  "PortXmitPkts",
+	C.IB_PC_EXT_RCV_PKTS_F:  "PortRcvPkts",
+	C.IB_PC_EXT_XMT_UPKTS_F: "PortUnicastXmitPkts",
+	C.IB_PC_EXT_RCV_UPKTS_F: "PortUnicastRcvPkts",
+	C.IB_PC_EXT_XMT_MPKTS_F: "PortMulticastXmitPkts",
+	C.IB_PC_EXT_RCV_MPKTS_F: "PortMulticastRcvPkts",
+}
+
 // getCounterUint32 decodes the specified counter from the supplied buffer and returns the uint32
 // counter value
 func getCounterUint32(buf *C.uint8_t, counter uint32) (v uint32) {
+	C.mad_decode_field(buf, counter, unsafe.Pointer(&v))
+	return v
+}
+
+// getCounterUint64 decodes the specified counter from the supplied buffer and returns the uint64
+// counter value
+func getCounterUint64(buf *C.uint8_t, counter uint32) (v uint64) {
 	C.mad_decode_field(buf, counter, unsafe.Pointer(&v))
 	return v
 }
@@ -144,6 +163,25 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) {
 							}
 
 							fmt.Printf("%s => %d\n", displayName, getCounterUint32(pmaBuf, counter))
+						}
+					}
+
+					if (capMask&C.IB_PM_EXT_WIDTH_SUPPORTED == 0) && (capMask&C.IB_PM_EXT_WIDTH_NOIETF_SUP == 0) {
+						// TODO: Fetch standard data / packet counters if extended counters are not
+						// supported (unlikely)
+						fmt.Println("No extended counter support indicated")
+						continue
+					}
+
+					// Fetch extended (64 bit) counters
+					pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), &portid, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS_EXT, f.ibmadPort)
+
+					if pmaBuf != nil {
+						// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and
+						// PortRcvDataSL, components that represent Data (e.g. PortXmitData and
+						// PortRcvData) indicate octets divided by 4 rather than just octets.
+						for counter, displayName := range extCounterMap {
+							fmt.Printf("%s => %d\n", displayName, getCounterUint64(pmaBuf, counter))
 						}
 					}
 				}
