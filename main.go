@@ -24,10 +24,38 @@ import (
 	"unsafe"
 )
 
+const PMA_TIMEOUT = 0
+
 type Fabric struct {
 	mutex      sync.RWMutex
 	ibndFabric *C.struct_ibnd_fabric
 	ibmadPort  *C.struct_ibmad_port
+}
+
+// Standard (32-bit) counters and their display names
+// TODO: Implement warnings and / or automatically reset counters when they are close to reaching
+// 	     their maximum permissible value (according to IBTA spec).
+var stdCounterMap = map[uint32]string{
+	C.IB_PC_ERR_SYM_F:        "SymbolErrorCounter",
+	C.IB_PC_LINK_RECOVERS_F:  "LinkErrorRecoveryCounter",
+	C.IB_PC_LINK_DOWNED_F:    "LinkDownedCounter",
+	C.IB_PC_ERR_RCV_F:        "PortRcvErrors",
+	C.IB_PC_ERR_PHYSRCV_F:    "PortRcvRemotePhysicalErrors",
+	C.IB_PC_ERR_SWITCH_REL_F: "PortRcvSwitchRelayErrors",
+	C.IB_PC_XMT_DISCARDS_F:   "PortXmitDiscards",
+	C.IB_PC_ERR_XMTCONSTR_F:  "PortXmitConstraintErrors",
+	C.IB_PC_ERR_RCVCONSTR_F:  "PortRcvConstraintErrors",
+	C.IB_PC_ERR_LOCALINTEG_F: "LocalLinkIntegrityErrors",
+	C.IB_PC_ERR_EXCESS_OVR_F: "ExcessiveBufferOverrunErrors",
+	C.IB_PC_VL15_DROPPED_F:   "VL15Dropped",
+	C.IB_PC_XMT_WAIT_F:       "PortXmitWait", // Requires cap mask IB_PM_PC_XMIT_WAIT_SUP
+}
+
+// getCounterUint32 decodes the specified counter from the supplied buffer and returns the uint32
+// counter value
+func getCounterUint32(buf *C.uint8_t, counter uint32) (v uint32) {
+	C.mad_decode_field(buf, counter, unsafe.Pointer(&v))
+	return v
 }
 
 // iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only swtich
@@ -67,6 +95,8 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) {
 
 				// TODO: Rework portState checking to optionally decode counters regardless of portState
 				if portState != C.IB_LINK_DOWN {
+					var buf [1024]byte
+
 					fmt.Printf("port %#v\n", pp)
 
 					// This should not be nil if the link is up, but check anyway
@@ -76,6 +106,45 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) {
 						fmt.Printf("Remote node type: %d, GUID: %#016x, descr: %s\n",
 							rp.node._type, rp.node.guid,
 							nnMap.remapNodeName(uint64(node.guid), C.GoString(&rp.node.nodedesc[0])))
+
+						// Determine max width supported by both ends
+						maxWidth := uint(1 << log2b(uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)&
+							C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F))))
+						if uint(linkWidth) != maxWidth {
+							fmt.Println("NOTICE: Link width is not the max width supported by both ports")
+						}
+
+						// Determine max speed supported by both ends
+						maxSpeed := uint(1 << log2b(uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)&
+							C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F))))
+						if uint(linkSpeed) != maxSpeed {
+							fmt.Println("NOTICE: Link speed is not the max speed supported by both ports")
+						}
+					}
+
+					// PerfMgt ClassPortInfo is a required attribute
+					pmaBuf := C.pma_query_via(unsafe.Pointer(&buf), &portid, C.int(portNum), PMA_TIMEOUT, C.CLASS_PORT_INFO, f.ibmadPort)
+
+					if pmaBuf == nil {
+						fmt.Printf("ERROR: CLASS_PORT_INFO query failed!")
+						continue
+					}
+
+					capMask := nativeEndian.Uint16(buf[2:4])
+					fmt.Printf("Cap Mask: %#02x\n", ntohs(capMask))
+
+					// Fetch standard (32 bit, some 16 bit) counters
+					pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), &portid, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, f.ibmadPort)
+
+					if pmaBuf != nil {
+						// Iterate over standard counters
+						for counter, displayName := range stdCounterMap {
+							if (counter == C.IB_PC_XMT_WAIT_F) && (capMask&C.IB_PM_PC_XMIT_WAIT_SUP == 0) {
+								continue // Counter not supported
+							}
+
+							fmt.Printf("%s => %d\n", displayName, getCounterUint32(pmaBuf, counter))
+						}
 					}
 				}
 			}

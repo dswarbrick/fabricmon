@@ -27,12 +27,50 @@ func init() {
 	}
 }
 
+func bitLen(x uint) (n uint) {
+	for ; x >= 0x8000; x >>= 16 {
+		n += 16
+	}
+	if x >= 0x80 {
+		x >>= 8
+		n += 8
+	}
+	if x >= 0x8 {
+		x >>= 4
+		n += 4
+	}
+	if x >= 0x2 {
+		x >>= 2
+		n += 2
+	}
+	if x >= 0x1 {
+		n++
+	}
+	return
+}
+
+func log2b(x uint) uint {
+	return bitLen(x) - 1
+}
+
 // ntohll converts a uint64 from network byte order to host byte order
 func ntohll(x uint64) uint64 {
 	if nativeEndian == binary.LittleEndian {
 		return swapUint64(x)
 	}
 	return x
+}
+
+// ntohs converts a uint16 from network byte order to host byte order
+func ntohs(x uint16) uint16 {
+	if nativeEndian == binary.LittleEndian {
+		return swapUint16(x)
+	}
+	return x
+}
+
+func swapUint16(n uint16) uint16 {
+	return (n&0x00ff)<<8 | (n&0xff00)>>8
 }
 
 func swapUint64(n uint64) uint64 {
