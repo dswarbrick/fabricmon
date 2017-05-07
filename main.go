@@ -18,6 +18,7 @@ package main
 import "C"
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"sync"
@@ -79,7 +80,7 @@ func getCounterUint64(buf *C.uint8_t, counter uint32) (v uint64) {
 
 // iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only swtich
 // nodes
-func iterateSwitches(f *Fabric, nnMap *NodeNameMap) {
+func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -191,8 +192,16 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) {
 }
 
 func main() {
-	caNames, _ := getCANames()
+	confFile := flag.String("conf", "fabricmon.conf", "Path to config file")
+	flag.Parse()
 
+	conf, err := readConfig(*confFile)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	caNames, _ := getCANames()
 	nnMap, _ := NewNodeNameMap()
 
 	for _, caName := range caNames {
@@ -239,7 +248,7 @@ func main() {
 			fmt.Printf("ibmad_port: %#v\n", fabric.ibmadPort)
 
 			// Walk switch nodes in fabric
-			iterateSwitches(&fabric, &nnMap)
+			iterateSwitches(&fabric, &nnMap, conf.InfluxDB)
 
 			fabric.mutex.Lock()
 
