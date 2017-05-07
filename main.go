@@ -21,8 +21,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 	"sync"
+	"time"
 	"unsafe"
 
 	influxdb "github.com/influxdata/influxdb/client/v2"
@@ -34,6 +34,7 @@ type Fabric struct {
 	mutex      sync.RWMutex
 	ibndFabric *C.struct_ibnd_fabric
 	ibmadPort  *C.struct_ibmad_port
+	topology   d3Topology
 }
 
 // Standard (32-bit) counters and their display names
@@ -102,6 +103,14 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 	defer f.mutex.Unlock()
 
 	for node := f.ibndFabric.nodes; node != nil; node = node.next {
+		d3n := d3Node{
+			Id:       fmt.Sprintf("%016x", node.guid),
+			NodeType: int(node._type),
+			Desc:     nnMap.remapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
+		}
+
+		f.topology.Nodes = append(f.topology.Nodes, d3n)
+
 		if node._type == C.IB_NODE_SWITCH {
 			var portid C.ib_portid_t
 
@@ -160,6 +169,8 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 						if uint(linkSpeed) != maxSpeed {
 							fmt.Println("NOTICE: Link speed is not the max speed supported by both ports")
 						}
+
+						f.topology.Links = append(f.topology.Links, d3Link{fmt.Sprintf("%016x", node.guid), fmt.Sprintf("%016x", rp.node.guid)})
 					}
 
 					// PerfMgt ClassPortInfo is a required attribute
@@ -298,4 +309,7 @@ func main() {
 
 		C.free(unsafe.Pointer(ca_name))
 	}
+
+	// Start HTTP server to serve JSON for d3.js (WIP)
+	//serve(conf.BindAddress, &fabric)
 }
