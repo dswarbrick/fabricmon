@@ -5,6 +5,8 @@
  * cgo wrapper around libibumad / libibnetdiscover
  * Note: Due to the usual permissions on /dev/infiniband/umad*, this will probably need to be
  * executed as root.
+ *
+ * TODO: Implement user-friendly display of link / speed / rate etc. (see ib_types.h)
  */
 package main
 
@@ -36,9 +38,47 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) {
 
 	for node := f.ibndFabric.nodes; node != nil; node = node.next {
 		if node._type == C.IB_NODE_SWITCH {
+			var portid C.ib_portid_t
+
 			fmt.Printf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x\n\n",
 				node._type, nnMap.remapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
 				node.numports, node.guid)
+
+			C.ib_portid_set(&portid, C.int(node.smalid), 0, 0)
+
+			// node.ports is an array of pointers, in which any port may be null. We use pointer
+			// arithmetic to get pointer to port struct.
+			arrayPtr := uintptr(unsafe.Pointer(node.ports))
+
+			for portNum := 0; portNum <= int(node.numports); portNum++ {
+				// Get pointer to port struct and increment arrayPtr to next pointer
+				pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))
+				arrayPtr += unsafe.Sizeof(arrayPtr)
+
+				portState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_STATE_F)
+				physState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_PHYS_STATE_F)
+
+				// TODO: Decode EXT_PORT_LINK_SPEED (i.e., FDR10)
+				linkWidth := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_ACTIVE_F)
+				linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
+
+				fmt.Printf("Port %d, port state: %d, phys state: %d, link width: %d, link speed: %d\n",
+					portNum, portState, physState, linkWidth, linkSpeed)
+
+				// TODO: Rework portState checking to optionally decode counters regardless of portState
+				if portState != C.IB_LINK_DOWN {
+					fmt.Printf("port %#v\n", pp)
+
+					// This should not be nil if the link is up, but check anyway
+					// FIXME: portState may be polling / armed etc, and rp will be null!
+					rp := pp.remoteport
+					if rp != nil {
+						fmt.Printf("Remote node type: %d, GUID: %#016x, descr: %s\n",
+							rp.node._type, rp.node.guid,
+							nnMap.remapNodeName(uint64(node.guid), C.GoString(&rp.node.nodedesc[0])))
+					}
+				}
+			}
 		}
 	}
 }
