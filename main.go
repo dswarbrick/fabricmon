@@ -21,8 +21,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 	"sync"
 	"unsafe"
+
+	influxdb "github.com/influxdata/influxdb/client/v2"
 )
 
 const PMA_TIMEOUT = 0
@@ -81,6 +84,20 @@ func getCounterUint64(buf *C.uint8_t, counter uint32) (v uint64) {
 // iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only swtich
 // nodes
 func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
+	// Batch to hold InfluxDB points
+	batch, err := influxdb.NewBatchPoints(influxdb.BatchPointsConfig{
+		Database:  conf.Database,
+		Precision: "s",
+	})
+	if err != nil {
+		return
+	}
+
+	hostname, _ := os.Hostname()
+	tags := map[string]string{"host": hostname}
+	fields := map[string]interface{}{}
+	now := time.Now()
+
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -91,6 +108,8 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 			fmt.Printf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x\n\n",
 				node._type, nnMap.remapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
 				node.numports, node.guid)
+
+			tags["guid"] = fmt.Sprintf("%016x", node.guid)
 
 			C.ib_portid_set(&portid, C.int(node.smalid), 0, 0)
 
@@ -118,6 +137,7 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 					var buf [1024]byte
 
 					fmt.Printf("port %#v\n", pp)
+					tags["port"] = fmt.Sprintf("%d", portNum)
 
 					// This should not be nil if the link is up, but check anyway
 					// FIXME: portState may be polling / armed etc, and rp will be null!
@@ -163,6 +183,12 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 								continue // Counter not supported
 							}
 
+							tags["counter"] = displayName
+							fields["value"] = getCounterUint32(pmaBuf, counter)
+							if point, err := influxdb.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
+								batch.AddPoint(point)
+							}
+
 							fmt.Printf("%s => %d\n", displayName, getCounterUint32(pmaBuf, counter))
 						}
 					}
@@ -182,6 +208,12 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 						// PortRcvDataSL, components that represent Data (e.g. PortXmitData and
 						// PortRcvData) indicate octets divided by 4 rather than just octets.
 						for counter, displayName := range extCounterMap {
+							tags["counter"] = displayName
+							fields["value"] = getCounterUint32(pmaBuf, counter)
+							if point, err := influxdb.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
+								batch.AddPoint(point)
+							}
+
 							fmt.Printf("%s => %d\n", displayName, getCounterUint64(pmaBuf, counter))
 						}
 					}
@@ -189,6 +221,9 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 			}
 		}
 	}
+
+	fmt.Printf("InfluxDB batch contains %d points\n", len(batch.Points()))
+	writeBatch(conf, batch)
 }
 
 func main() {
