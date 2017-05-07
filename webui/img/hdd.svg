@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" height="200" width="200" version="1.1">
+  <rect height="200" width="140" y="0" x="30" fill="#000" rx="10" ry="10"/>
+  <g fill="#fff">
+    <circle id="screw" cx="40" cy="10" r="3"/>
+    <use href="#screw" transform="translate(120 0)"/>
+    <use href="#screw" transform="translate(120 180)"/>
+    <use href="#screw" transform="translate(0 180)"/>
+    <circle cx="100" cy="80" r="50"/>
+    <circle cx="100" cy="80" r="15" stroke="#000" stroke-width="4"/>
+  </g>
+  <g fill="none" stroke-width="5">
+    <polyline points="100,110 100,140 80,160" stroke="#000"/>
+    <polyline points="100,110 100,140 80,160" stroke="#fff" transform="translate(5 0)"/>
+  </g>
+</svg>
