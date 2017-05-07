@@ -52,11 +52,11 @@ d3.json(fabric + ".json", function(error, graph) {
         .on("end", dragended));
 
   node.append("image")
-      .attr("xlink:href", "https://github.com/favicon.ico")
-      .attr("x", -8)
-      .attr("y", -8)
-      .attr("width", 16)
-      .attr("height", 16);
+      .attr("xlink:href", "img/switch.svg")
+      .attr("x", -6)
+      .attr("y", -6)
+      .attr("width", 32)
+      .attr("height", 32);
 
   node.append("text")
     .attr("dx", 12)
