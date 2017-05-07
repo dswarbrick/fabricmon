@@ -12,5 +12,5 @@
     <use href="#arrow" transform="scale(-1) translate(-200 -200)"/>
     <use href="#arrow" transform="rotate(270 100 100) translate(0 100)"/>
     <use href="#arrow" transform="rotate(90 100 100) translate(0 100)"/>
- </g>
+  </g>
 </svg>
