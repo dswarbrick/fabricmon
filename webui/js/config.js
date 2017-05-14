@@ -3,6 +3,10 @@
  * Copyright 2017 Daniel Swarbrick
  */
 
+var fabrics = [
+  ["cluster 401", "cluster401.json"]
+];
+
 // nodeImageMap is an array of regex-URL pairs. The node description will be tested against each
 // regex in the specified order, and the first match will determine the image used for the node.
 // The last regex should be a catch-all pattern.

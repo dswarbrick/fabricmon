@@ -1,3 +1,10 @@
+@import url("https://fonts.googleapis.com/css?family=Roboto");
+
+h1 {
+  font-size: 1.2em;
+  font-weight: normal;
+}
+
 .links line {
   stroke: #999;
   stroke-opacity: 0.6;
@@ -7,4 +14,28 @@
   pointer-events: none;
   font: 10px sans-serif;
   fill: #666;
+}
+
+#fabric {
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+}
+
+#overlay {
+  width: 15%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background-color: rgba(0,0,40,0.85);
+  color: #fff;
+  font-family: "Roboto", sans-serif;
+  padding: 8px;
+  z-index: 100;
 }
