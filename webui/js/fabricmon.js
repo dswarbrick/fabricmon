@@ -3,7 +3,8 @@
  * Copyright 2017 Daniel Swarbrick
  */
 
-var nodeTypes = {1: "HCA", 2: "Switch", 3: "Router"}
+var nodeTypes = {1: "HCA", 2: "Switch", 3: "Router"},
+  simulation;
 
 function dragstarted(d) {
   if (!d3.event.active) simulation.alphaTarget(0.3).restart();
@@ -23,9 +24,34 @@ function dragended(d) {
 }
 
 function handleNodeClick(d) {
+  var links = simulation.force("link").links(),
+    connectedNodes = [d.index];
+
   console.log("Node clicked: ", d);
   document.getElementById("sel_node_guid").textContent = d.id;
   document.getElementById("sel_node_desc").textContent = d.desc;
+
+  // Build array of nodes that are linked to this node
+  links.forEach(function (l) {
+    if (l.source.index == d.index) connectedNodes.push(l.target.index);
+    if (l.target.index == d.index) connectedNodes.push(l.source.index);
+  });
+
+  // Adjust opacity of links depending on whether it is connected to this node
+  d3.select("svg").selectAll(".links").selectAll("line").style("opacity", function(o) {
+    if (o.source.index == d.index || o.target.index == d.index)
+      return 1;
+    else
+      return 0.1;
+  });
+
+  // Adjust opacity of nodes dependong on whether they are connected to this node
+  d3.select("svg").selectAll(".node").style("opacity", function(o) {
+    if (connectedNodes.indexOf(o.index) != -1)
+      return 1;
+    else
+      return 0.1;
+  });
 }
 
 function changeFabric(event) {
@@ -118,8 +144,6 @@ function changeFabric(event) {
 
 var svg = d3.select("svg"),
   bbox = svg.node().getBBox();
-
-var simulation;
 
 var sel = document.getElementById("fabric_select");
 
