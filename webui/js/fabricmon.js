@@ -22,6 +22,12 @@ function dragended(d) {
   d.fy = null;
 }
 
+function handleNodeClick(d) {
+  console.log("Node clicked: ", d);
+  document.getElementById("sel_node_guid").textContent = d.id;
+  document.getElementById("sel_node_desc").textContent = d.desc;
+}
+
 function changeFabric(event) {
   var svg = d3.select("svg");
 
@@ -88,6 +94,8 @@ function changeFabric(event) {
 
     node.append("title")
       .text(function(d) { return nodeTypes[d.nodetype] || "Unknown node type"; });
+
+    node.on("click", handleNodeClick);
 
     simulation
       .nodes(graph.nodes)
