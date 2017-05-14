@@ -15,3 +15,21 @@ FabricMon's web interface, based on the d3.js graph library, and displayed as
 an SVG force graph.
 
 This project is a work in progress, in the early stages of development.
+
+Building FabricMon
+------------------
+To build FabricMon, you will require the following development libraries
+(Debian package names shown):
+
+* libibmad-dev
+* libibumad-dev
+* libibnetdisc-dev
+
+The corresponding runtime libraries will be required on the target system
+unless you build the FabricMon binary with static linking.
+
+InfiniBand Counters
+-------------------
+Note that counters that represent data (e.g. PortXmitData and PortRcvData) are
+divided by four (lanes). See https://community.mellanox.com/docs/DOC-2572 for
+more information.

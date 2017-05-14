@@ -184,6 +184,10 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 					capMask := nativeEndian.Uint16(buf[2:4])
 					fmt.Printf("Cap Mask: %#02x\n", ntohs(capMask))
 
+					// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and
+					// PortRcvDataSL, components that represent Data (e.g. PortXmitData and
+					// PortRcvData) indicate octets divided by 4 rather than just octets.
+
 					// Fetch standard (32 bit, some 16 bit) counters
 					pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), &portid, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, f.ibmadPort)
 
@@ -215,9 +219,6 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 					pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), &portid, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS_EXT, f.ibmadPort)
 
 					if pmaBuf != nil {
-						// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and
-						// PortRcvDataSL, components that represent Data (e.g. PortXmitData and
-						// PortRcvData) indicate octets divided by 4 rather than just octets.
 						for counter, displayName := range extCounterMap {
 							tags["counter"] = displayName
 							fields["value"] = getCounterUint32(pmaBuf, counter)
