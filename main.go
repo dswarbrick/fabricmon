@@ -239,6 +239,8 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 }
 
 func main() {
+	var fabric Fabric
+
 	confFile := flag.String("conf", "fabricmon.conf", "Path to config file")
 	flag.Parse()
 
@@ -262,7 +264,6 @@ func main() {
 			var (
 				config C.ibnd_config_t
 				err    error
-				fabric Fabric
 			)
 
 			fmt.Printf("Found CA %s (%s) with %d ports and firmware %s\n",

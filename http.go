@@ -8,7 +8,9 @@ package main
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -30,8 +32,24 @@ type d3Topology struct {
 	Links []d3Link `json:"links"`
 }
 
-func marshalTopology(w http.ResponseWriter, req *http.Request, f *Fabric) {
-	log.Println(req)
+// indexHandler renders a simple landing page for browsers that stumble upon the URL
+func indexHandler(w http.ResponseWriter, req *http.Request) {
+	// The "/" pattern matches everything, so we need to check that we're at the root here.
+	if req.URL.Path != "/" {
+		http.NotFound(w, req)
+		return
+	}
+
+	fmt.Fprint(w, "<!DOCTYPE html>\n"+
+		"<html>\n"+
+		"<h1>FabricMon</h1>\n"+
+		"<h2>Available Fabrics</h2>\n"+
+		"<a href=\"/json/\">default</a>\n"+
+		"</html>\n")
+}
+
+func marshalTopology(w http.ResponseWriter, req *http.Request) {
+	f := req.Context().Value("fabric").(*Fabric)
 
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
@@ -52,12 +70,20 @@ func marshalTopology(w http.ResponseWriter, req *http.Request, f *Fabric) {
 	w.Header().Set("Content-Length", strconv.Itoa(n))
 }
 
-func serve(listenAddress string, f *Fabric) {
-	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		marshalTopology(w, req, f)
+// addContext adds the fabric pointer to the request context
+func addContext(next http.Handler, fabric *Fabric) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r)
+		ctx := context.WithValue(r.Context(), "fabric", fabric)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
 
-	if err := http.ListenAndServe(listenAddress, nil); err != nil {
-		log.Fatalf("Error starting HTTP server: %s", err)
-	}
+func serve(listenAddress string, f *Fabric) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", indexHandler)
+	mux.HandleFunc("/json/", marshalTopology)
+
+	log.Fatal(http.ListenAndServe(listenAddress, addContext(mux, f)))
 }
