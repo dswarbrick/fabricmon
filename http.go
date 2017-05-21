@@ -11,9 +11,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
-	"strconv"
+	"strings"
 )
 
 type d3Node struct {
@@ -32,6 +33,15 @@ type d3Topology struct {
 	Links []d3Link `json:"links"`
 }
 
+type gzipResponseWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
+func (w gzipResponseWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
 // indexHandler renders a simple landing page for browsers that stumble upon the URL
 func indexHandler(w http.ResponseWriter, req *http.Request) {
 	// The "/" pattern matches everything, so we need to check that we're at the root here.
@@ -39,6 +49,8 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 		http.NotFound(w, req)
 		return
 	}
+
+	w.Header().Set("Content-Type", "text/html")
 
 	fmt.Fprint(w, "<!DOCTYPE html>\n"+
 		"<html>\n"+
@@ -60,22 +72,26 @@ func marshalTopology(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Encoding", "gzip")
 	w.Header().Set("Content-Type", "application/json")
-
-	gz := gzip.NewWriter(w)
-	defer gz.Close()
-
-	n, err := gz.Write(jsonBuf)
-	w.Header().Set("Content-Length", strconv.Itoa(n))
+	w.Write(jsonBuf)
 }
 
-// addContext adds the fabric pointer to the request context
-func addContext(next http.Handler, fabric *Fabric) http.Handler {
+// middleware adds the fabric pointer to the request context and wraps the ResponseWriter in a gzip
+// handler.
+func middleware(next http.Handler, fabric *Fabric) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println(r)
 		ctx := context.WithValue(r.Context(), "fabric", fabric)
-		next.ServeHTTP(w, r.WithContext(ctx))
+
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			gz := gzip.NewWriter(w)
+			defer gz.Close()
+
+			w.Header().Set("Content-Encoding", "gzip")
+			next.ServeHTTP(gzipResponseWriter{gz, w}, r.WithContext(ctx))
+		} else {
+			next.ServeHTTP(w, r.WithContext(ctx))
+		}
 	})
 }
 
@@ -85,5 +101,5 @@ func serve(listenAddress string, f *Fabric) {
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/json/", marshalTopology)
 
-	log.Fatal(http.ListenAndServe(listenAddress, addContext(mux, f)))
+	log.Fatal(http.ListenAndServe(listenAddress, middleware(mux, f)))
 }
