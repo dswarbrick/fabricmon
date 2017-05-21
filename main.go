@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 	"unsafe"
@@ -87,7 +88,7 @@ func getCounterUint64(buf *C.uint8_t, counter uint32) (v uint64) {
 
 // iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only swtich
 // nodes
-func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
+func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName string, portNum int) {
 	// Batch to hold InfluxDB points
 	batch, err := influxdb.NewBatchPoints(influxdb.BatchPointsConfig{
 		Database:  conf.Database,
@@ -98,7 +99,7 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 	}
 
 	hostname, _ := os.Hostname()
-	tags := map[string]string{"host": hostname}
+	tags := map[string]string{"host": hostname, "hca": caName, "src_port": strconv.Itoa(portNum)}
 	fields := map[string]interface{}{}
 	now := time.Now()
 
@@ -206,8 +207,6 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 							if point, err := influxdb.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
 								batch.AddPoint(point)
 							}
-
-							fmt.Printf("%s => %d\n", displayName, getCounterUint32(pmaBuf, counter))
 						}
 					}
 
@@ -224,12 +223,16 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 					if pmaBuf != nil {
 						for counter, displayName := range extCounterMap {
 							tags["counter"] = displayName
-							fields["value"] = getCounterUint32(pmaBuf, counter)
+
+							// FIXME: InfluxDB does not support uint64
+							// (https://github.com/influxdata/influxdb/issues/7801)
+							// Workaround is to either convert to int64 (i.e., truncate to 63 bits),
+							// or convert to Float64 and sacrifice accuracy.
+							fields["value"] = int64(getCounterUint64(pmaBuf, counter))
+
 							if point, err := influxdb.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
 								batch.AddPoint(point)
 							}
-
-							fmt.Printf("%s => %d\n", displayName, getCounterUint64(pmaBuf, counter))
 						}
 					}
 				}
@@ -307,7 +310,7 @@ func main() {
 				fmt.Printf("ibmad_port: %#v\n", fabrics[caName][portNum].ibmadPort)
 
 				// Walk switch nodes in fabric
-				iterateSwitches(fabrics[caName][portNum], &nnMap, conf.InfluxDB)
+				iterateSwitches(fabrics[caName][portNum], &nnMap, conf.InfluxDB, caName, portNum)
 
 				fabrics[caName][portNum].mutex.Lock()
 
