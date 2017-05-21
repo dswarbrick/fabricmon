@@ -37,6 +37,9 @@ type Fabric struct {
 	topology   d3Topology
 }
 
+// FabricMap is a two-dimensional map holding the Fabric struct for each HCA / port pair
+type FabricMap map[string]map[int]*Fabric
+
 // Standard (32-bit) counters and their display names
 // TODO: Implement warnings and / or automatically reset counters when they are close to reaching
 // 	     their maximum permissible value (according to IBTA spec).
@@ -239,7 +242,7 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf) {
 }
 
 func main() {
-	var fabric Fabric
+	fabrics := make(FabricMap)
 
 	confFile := flag.String("conf", "fabricmon.conf", "Path to config file")
 	flag.Parse()
@@ -255,6 +258,8 @@ func main() {
 
 	for _, caName := range caNames {
 		var ca C.umad_ca_t
+
+		fabrics[caName] = make(map[int]*Fabric)
 
 		// Pointer to char array will be allocated on C heap; must free pointer explicitly
 		ca_name := C.CString(caName)
@@ -273,40 +278,47 @@ func main() {
 
 			fmt.Printf("%s: %#v\n\n", caName, ca)
 
-			for p := 1; ca.ports[p] != nil; p++ {
-				fmt.Printf("port %d: %#v\n\n", p, ca.ports[p])
+			// Iterate over HCA's ports and perform fabric discovery from each
+			for portNum := 1; ca.ports[portNum] != nil; portNum++ {
+				fmt.Printf("port %d: %#v\n\n", portNum, ca.ports[portNum])
+				fabrics[caName][portNum] = &Fabric{}
+
+				// Return pointer to ibnd_fabric_t struct
+				// ibnd_fabric_t *ibnd_discover_fabric(char *ca_name, int ca_port, ib_portid_t *from, ibnd_config_t *config)
+				fabrics[caName][portNum].ibndFabric, err = C.ibnd_discover_fabric(
+					&ca.ca_name[0], C.int(portNum), nil, &config)
+
+				if err != nil {
+					fmt.Println("Unable to discover fabric:", err)
+					os.Exit(1)
+				}
+
+				mgmt_classes := [3]C.int{C.IB_SMI_CLASS, C.IB_SA_CLASS, C.IB_PERFORMANCE_CLASS}
+
+				// struct ibmad_port *mad_rpc_open_port(char *dev_name, int dev_port, int *mgmt_classes, int num_classes)
+				fabrics[caName][portNum].ibmadPort, err = C.mad_rpc_open_port(
+					ca_name, C.int(portNum), &mgmt_classes[0], C.int(len(mgmt_classes)))
+
+				if err != nil {
+					fmt.Println("Unable to open MAD port:", err)
+					os.Exit(1)
+				}
+
+				fmt.Printf("ibmad_port: %#v\n", fabrics[caName][portNum].ibmadPort)
+
+				// Walk switch nodes in fabric
+				iterateSwitches(fabrics[caName][portNum], &nnMap, conf.InfluxDB)
+
+				fabrics[caName][portNum].mutex.Lock()
+
+				// Close MAD port
+				C.mad_rpc_close_port(fabrics[caName][portNum].ibmadPort)
+
+				// Free memory and resources associated with fabric
+				C.ibnd_destroy_fabric(fabrics[caName][portNum].ibndFabric)
+
+				fabrics[caName][portNum].mutex.Unlock()
 			}
-
-			// Return pointer to fabric struct
-			fabric.ibndFabric, err = C.ibnd_discover_fabric(&ca.ca_name[0], 1, nil, &config)
-
-			if err != nil {
-				fmt.Println("Unable to discover fabric:", err)
-				os.Exit(1)
-			}
-
-			mgmt_classes := [3]C.int{C.IB_SMI_CLASS, C.IB_SA_CLASS, C.IB_PERFORMANCE_CLASS}
-			fabric.ibmadPort, err = C.mad_rpc_open_port(ca_name, 1, &mgmt_classes[0], C.int(len(mgmt_classes)))
-
-			if err != nil {
-				fmt.Println("Unable to open MAD port:", err)
-				os.Exit(1)
-			}
-
-			fmt.Printf("ibmad_port: %#v\n", fabric.ibmadPort)
-
-			// Walk switch nodes in fabric
-			iterateSwitches(&fabric, &nnMap, conf.InfluxDB)
-
-			fabric.mutex.Lock()
-
-			// Close MAD port
-			C.mad_rpc_close_port(fabric.ibmadPort)
-
-			// Free memory and resources associated with fabric
-			C.ibnd_destroy_fabric(fabric.ibndFabric)
-
-			fabric.mutex.Unlock()
 		}
 
 		C.free(unsafe.Pointer(ca_name))
