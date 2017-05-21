@@ -325,5 +325,5 @@ func main() {
 	}
 
 	// Start HTTP server to serve JSON for d3.js (WIP)
-	//serve(conf.BindAddress, &fabric)
+	//serve(conf.BindAddress, fabrics)
 }

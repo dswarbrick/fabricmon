@@ -14,6 +14,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -50,18 +51,41 @@ func indexHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/html")
+	fm := req.Context().Value("fabricMap").(FabricMap)
 
+	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprint(w, "<!DOCTYPE html>\n"+
 		"<html>\n"+
 		"<h1>FabricMon</h1>\n"+
-		"<h2>Available Fabrics</h2>\n"+
-		"<a href=\"/json/\">default</a>\n"+
-		"</html>\n")
+		"<h2>Available Fabrics</h2>\n")
+
+	for caName, _ := range fm {
+		for portNum, _ := range fm[caName] {
+			fmt.Fprintf(w, "<a href=\"/json/?ca=%s&port=%d\">%s port %d</a>\n",
+				caName, portNum, caName, portNum)
+		}
+	}
+
+	fmt.Fprint(w, "</html>\n")
 }
 
 func marshalTopology(w http.ResponseWriter, req *http.Request) {
-	f := req.Context().Value("fabric").(*Fabric)
+	var f *Fabric
+
+	query := req.URL.Query()
+
+	if ca, exists := query["ca"]; exists {
+		if port, exists := query["port"]; exists {
+			portNum, _ := strconv.ParseInt(port[0], 10, 0)
+			fm := req.Context().Value("fabricMap").(FabricMap)
+			f = fm[ca[0]][int(portNum)]
+		}
+	}
+
+	if f == nil {
+		http.NotFound(w, req)
+		return
+	}
 
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
@@ -78,10 +102,10 @@ func marshalTopology(w http.ResponseWriter, req *http.Request) {
 
 // middleware adds the fabric pointer to the request context and wraps the ResponseWriter in a gzip
 // handler.
-func middleware(next http.Handler, fabric *Fabric) http.Handler {
+func middleware(next http.Handler, fm FabricMap) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Println(r)
-		ctx := context.WithValue(r.Context(), "fabric", fabric)
+		ctx := context.WithValue(r.Context(), "fabricMap", fm)
 
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			gz := gzip.NewWriter(w)
@@ -95,11 +119,11 @@ func middleware(next http.Handler, fabric *Fabric) http.Handler {
 	})
 }
 
-func serve(listenAddress string, f *Fabric) {
+func serve(listenAddr string, fm FabricMap) {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/json/", marshalTopology)
 
-	log.Fatal(http.ListenAndServe(listenAddress, middleware(mux, f)))
+	log.Fatal(http.ListenAndServe(listenAddr, middleware(mux, fm)))
 }
