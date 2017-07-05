@@ -3,6 +3,11 @@
  * Copyright 2017 Daniel Swarbrick
  *
  * Functions analogous to libibumad
+ *
+ * Note: Fabricmon cannot currently be run in an ibsim environment. The libumad2sim.so LD_PRELOAD
+ * hijacks libc functions such as scandir(3), which libibumad uses to enumerate HCAs found in sysfs.
+ * Other libc functions like ioctl(2) and basic file IO functions (e.g., open(2), read(2) etc.) are
+ * also hijacked to intercept operations on /dev/infiniband/* and /sys/class/infiniband/* entries.
  */
 package main
 

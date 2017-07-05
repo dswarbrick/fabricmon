@@ -24,6 +24,7 @@ To build FabricMon, you will require the following development libraries
 * libibmad-dev
 * libibumad-dev
 * libibnetdisc-dev
+* libopensm-dev
 
 The corresponding runtime libraries will be required on the target system
 unless you build the FabricMon binary with static linking.
