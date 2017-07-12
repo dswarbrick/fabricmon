@@ -1,0 +1,92 @@
+{
+  "nodes": [
+    {
+      "id": "003048ffff95fd1a",
+      "desc": "sw1",
+      "nodetype": 2
+    },
+    {
+      "id": "003048ffff95bc92",
+      "desc": "sw2",
+      "nodetype": 2
+    },
+    {
+      "id": "f452140300dad7ff",
+      "desc": "st101a-1",
+      "nodetype": 1
+    },
+    {
+      "id": "f45214030039c991",
+      "desc": "st101a-2",
+      "nodetype": 1
+    },
+    {
+      "id": "f452140300e8e414",
+      "desc": "gw101a-1",
+      "nodetype": 1
+    },
+    {
+      "id": "f4521403002dd60e",
+      "desc": "n101a-1",
+      "nodetype": 1
+    },
+    {
+      "id": "f452140300799f01",
+      "desc": "st201a-1",
+      "nodetype": 1
+    },
+    {
+      "id": "f452140300101f40",
+      "desc": "st201a-2",
+      "nodetype": 1
+    },
+    {
+      "id": "f452140300996604",
+      "desc": "gw201a-1",
+      "nodetype": 1
+    },
+    {
+      "id": "f452140300b6b712",
+      "desc": "n201a-2",
+      "nodetype": 1
+    }
+  ],
+  "links": [
+    {
+      "source": "003048ffff95fd1a",
+      "target": "003048ffff95bc92"
+    },
+    {
+      "source": "003048ffff95fd1a",
+      "target": "f452140300dad7ff"
+    },
+    {
+      "source": "003048ffff95fd1a",
+      "target": "f45214030039c991"
+    },
+    {
+      "source": "003048ffff95fd1a",
+      "target": "f452140300e8e414"
+    },
+    {
+      "source": "003048ffff95fd1a",
+      "target": "f4521403002dd60e"
+    },
+    {
+      "source": "003048ffff95bc92",
+      "target": "f452140300799f01"
+    },
+    {
+      "source": "003048ffff95bc92",
+      "target": "f452140300101f40"
+    },
+    {
+      "source": "003048ffff95bc92",
+      "target": "f452140300996604"
+    },
+    {
+      "source": "003048ffff95bc92",
+      "target": "f452140300b6b712"
+    }
+  ]
+}

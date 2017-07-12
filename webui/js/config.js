@@ -4,7 +4,7 @@
  */
 
 var fabrics = [
-  ["cluster 401", "cluster401.json"]
+  ["Example Fabric", "samples/example.json"]
 ];
 
 // nodeImageMap is an array of regex-URL pairs. The node description will be tested against each
@@ -12,7 +12,7 @@ var fabrics = [
 // The last regex should be a catch-all pattern.
 var nodeImageMap = [
   [/^gw(\d+[ab]-\d+|\d+)/, "img/router.svg"],
-  [/^(ps\d+[ab]-\d+|pserver\d+)/, "img/cpu.svg"],
+  [/^(n\d+[ab]-\d+|node\d+)/, "img/cpu.svg"],
   [/^(st\d+[ab]-\d+|storage\d+)/, "img/hdd.svg"],
   [/./, "img/default.svg"]
 ];
