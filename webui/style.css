@@ -20,6 +20,23 @@ h1 {
   fill: #666;
 }
 
+table.node-info {
+  border-collapse: collapse;
+  font-size: 0.9em;
+  margin-top: 20px;
+}
+
+table.node-info caption {
+  font-weight: bold;
+  text-align: left;
+}
+
+table.node-info th {
+  font-weight: normal;
+  padding-right: 1em;
+  text-align: left;
+}
+
 #fabric {
   width: 100%;
   height: 100%;

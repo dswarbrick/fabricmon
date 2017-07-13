@@ -4,7 +4,7 @@
  */
 
 var nodeTypes = {1: "HCA", 2: "Switch", 3: "Router"},
-  simulation;
+  simulation, svg, bbox;
 
 function dragstarted(d) {
   if (!d3.event.active) simulation.alphaTarget(0.3).restart();
@@ -23,11 +23,17 @@ function dragended(d) {
   d.fy = null;
 }
 
+function clearSelection() {
+  d3.select("svg").selectAll(".links").selectAll("line").style("opacity", 1);
+  d3.select("svg").selectAll(".node").style("opacity", 1);
+}
+
 function handleNodeClick(d) {
   var links = simulation.force("link").links(),
     connectedNodes = [d.index];
 
   console.log("Node clicked: ", d);
+  document.getElementById("sel_node_type").textContent = nodeTypes[d.nodetype];
   document.getElementById("sel_node_guid").textContent = d.id;
   document.getElementById("sel_node_desc").textContent = d.desc;
 
@@ -52,6 +58,8 @@ function handleNodeClick(d) {
     else
       return 0.1;
   });
+
+  d3.event.stopPropagation();
 }
 
 function changeFabric(event) {
@@ -142,17 +150,22 @@ function changeFabric(event) {
   });
 }
 
-var svg = d3.select("svg"),
-  bbox = svg.node().getBBox();
+document.onreadystatechange = () => {
+  if (document.readyState === 'complete') {
+    var sel = document.getElementById("fabric_select");
 
-var sel = document.getElementById("fabric_select");
+    // Populate fabric-select list
+    for (var x = 0; x < fabrics.length; x++) {
+      var option = document.createElement("option");
+      option.text = fabrics[x][0];
+      option.value = fabrics[x][1];
+      sel.add(option);
+    }
 
-// Populate fabric-select list
-for (var x = 0; x < fabrics.length; x++) {
-  var option = document.createElement("option");
-  option.text = fabrics[x][0];
-  option.value = fabrics[x][1];
-  sel.add(option);
-}
+    sel.addEventListener("change", changeFabric);
 
-sel.addEventListener("change", changeFabric);
+    svg = d3.select("svg");
+    svg.on("click", clearSelection);
+    bbox = svg.node().getBBox();
+  }
+};

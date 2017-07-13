@@ -16,8 +16,21 @@
       <option value="_">Select fabric...</option>
     </select>
     <div>
-      <p id="sel_node_guid"/>
-      <p id="sel_node_desc"/>
+      <table class="node-info">
+        <caption>Selected Node</caption>
+        <tr>
+          <th>Type</th>
+          <td id="sel_node_type">(none selected)</td>
+        </tr>
+        <tr>
+          <th>GUID</th>
+          <td id="sel_node_guid"></td>
+        </tr>
+        <tr>
+          <th>Description</th>
+          <td id="sel_node_desc"></td>
+        </tr>
+      </table>
     </div>
   </div>
   <script src="https://d3js.org/d3.v4.min.js"></script>
