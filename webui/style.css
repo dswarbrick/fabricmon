@@ -47,13 +47,15 @@ table.node-info th {
   height: 100%;
 }
 
-.links line {
+svg .links line {
   stroke: #999;
-  stroke-opacity: 0.6;
 }
 
-.node text {
-  pointer-events: none;
+svg .node {
+  cursor: pointer;
+}
+
+svg .node text {
   font: 10px sans-serif;
   fill: #008;
 }
