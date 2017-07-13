@@ -1,0 +1,25 @@
+Switch	8	"sw1"
+[1]	"n101-1"[1]
+[2]	"n102-1"[1]
+[3]	"st101-1"[1]
+[4]	"st102-1"[1]
+[5]	"gw101-1"[1]
+
+Hca		2	"n101-1"
+[1]	"sw1"[1]
+
+Hca		2	"n102-1"
+[1]	"sw1"[2]
+
+Hca		2	"st101-1"
+[1]	"sw1"[3]
+
+Hca		2	"st102-1"
+[1]	"sw1"[4]
+
+Hca		2	"gw101-1"
+[1]	"sw1"[5]
+
+# perfquery will not work without a LID
+do baselid "sw1"[0] 1
+

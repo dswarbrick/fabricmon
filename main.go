@@ -306,6 +306,8 @@ func main() {
 			fmt.Printf("%s: %#v\n\n", caName, ca)
 
 			// Iterate over HCA's ports and perform fabric discovery from each
+			// FIXME: This is incompatible with how ibsim works, which reports 0 ports, yet actually
+			// populates ca.ports[0] with a valid struct
 			for portNum := 1; ca.ports[portNum] != nil; portNum++ {
 				fmt.Printf("port %d: %#v\n\n", portNum, ca.ports[portNum])
 				fabrics[caName][portNum] = &Fabric{}
@@ -326,6 +328,7 @@ func main() {
 				fabrics[caName][portNum].ibmadPort, err = C.mad_rpc_open_port(
 					ca_name, C.int(portNum), &mgmt_classes[0], C.int(len(mgmt_classes)))
 
+				// FIXME: Make this compatible with ibsim
 				if err != nil {
 					fmt.Println("Unable to open MAD port:", err)
 					os.Exit(1)

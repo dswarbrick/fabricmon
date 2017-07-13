@@ -20,11 +20,11 @@ func writeBatch(conf influxdbConf, batch influxdb.BatchPoints) {
 		Password: conf.Password,
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	if err := c.Write(batch); err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	c.Close()

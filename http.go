@@ -107,6 +107,9 @@ func middleware(next http.Handler, fm FabricMap) http.Handler {
 		log.Println(r)
 		ctx := context.WithValue(r.Context(), "fabricMap", fm)
 
+		// Keep XHR requests happy
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			gz := gzip.NewWriter(w)
 			defer gz.Close()
