@@ -4,7 +4,7 @@
  */
 
 var nodeTypes = {1: "HCA", 2: "Switch", 3: "Router"},
-  simulation, svg, bbox;
+  simulation, viewPort;
 
 function dragstarted(d) {
   if (!d3.event.active) simulation.alphaTarget(0.3).restart();
@@ -24,8 +24,8 @@ function dragended(d) {
 }
 
 function clearSelection() {
-  d3.select("svg").selectAll(".links").selectAll("line").style("opacity", 1);
-  d3.select("svg").selectAll(".node").style("opacity", 1);
+  viewPort.selectAll(".links").selectAll("line").style("opacity", 1);
+  viewPort.selectAll(".node").style("opacity", 1);
 }
 
 function handleNodeClick(d) {
@@ -44,7 +44,7 @@ function handleNodeClick(d) {
   });
 
   // Adjust opacity of links depending on whether it is connected to this node
-  d3.select("svg").selectAll(".links").selectAll("line").style("opacity", function(o) {
+  viewPort.selectAll(".links").selectAll("line").style("opacity", function(o) {
     if (o.source.index == d.index || o.target.index == d.index)
       return 1;
     else
@@ -52,7 +52,7 @@ function handleNodeClick(d) {
   });
 
   // Adjust opacity of nodes dependong on whether they are connected to this node
-  d3.select("svg").selectAll(".node").style("opacity", function(o) {
+  viewPort.selectAll(".node").style("opacity", function(o) {
     if (connectedNodes.indexOf(o.index) != -1)
       return 1;
     else
@@ -63,18 +63,18 @@ function handleNodeClick(d) {
 }
 
 function changeFabric(event) {
-  var svg = d3.select("svg");
-
   // Clear existing fabric
-  svg.selectAll("g").remove();
+  viewPort.selectAll("g").remove();
 
   // Container group which will be used for zooming
-  var g = svg.append("g");
+  var g = viewPort.append("g");
 
   // Attach zoom event handler to <svg> element
-  svg.call(d3.zoom()
+  viewPort.call(d3.zoom()
     .scaleExtent([0.5, 3])
     .on("zoom", function() { g.attr("transform", d3.event.transform); }));
+
+  var bbox = viewPort.node().getBBox();
 
   simulation = d3.forceSimulation()
     .force("link", d3.forceLink()
@@ -164,8 +164,7 @@ document.onreadystatechange = () => {
 
     sel.addEventListener("change", changeFabric);
 
-    svg = d3.select("svg");
-    svg.on("click", clearSelection);
-    bbox = svg.node().getBBox();
+    viewPort = d3.select("svg")
+      .on("click", clearSelection);
   }
 };
