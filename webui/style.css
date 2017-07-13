@@ -2,22 +2,13 @@
 
 body {
   font-family: "Roboto", sans-serif;
+  height: 100vh;
+  margin: 0;
 }
 
 h1 {
   font-size: 1.2em;
   font-weight: normal;
-}
-
-.links line {
-  stroke: #999;
-  stroke-opacity: 0.6;
-}
-
-.node text {
-  pointer-events: none;
-  font: 10px sans-serif;
-  fill: #666;
 }
 
 table.node-info {
@@ -37,25 +28,31 @@ table.node-info th {
   text-align: left;
 }
 
+#sidebar {
+  height: 100%;
+  width: 250px;
+  float: left;
+  color: #fff;
+  background-color: #004;
+}
+
+#viewport {
+  height: 100%;
+  margin-left: 250px;
+}
+
 #fabric {
   width: 100%;
   height: 100%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
 }
 
-#overlay {
-  width: 15%;
-  height: 100%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  background-color: rgba(0,0,40,0.85);
-  color: #fff;
-  padding: 8px;
-  z-index: 100;
+.links line {
+  stroke: #999;
+  stroke-opacity: 0.6;
+}
+
+.node text {
+  pointer-events: none;
+  font: 10px sans-serif;
+  fill: #666;
 }
