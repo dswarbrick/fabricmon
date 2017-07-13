@@ -4,7 +4,9 @@
  */
 
 var fabrics = [
-  ["Example Fabric", "samples/example.json"]
+  ["2-switch topology", "samples/2-switch.json"],
+  ["3-switch topology", "samples/3-switch.json"],
+  ["fat tree topology", "samples/fat-tree.json"]
 ];
 
 // nodeImageMap is an array of regex-URL pairs. The node description will be tested against each

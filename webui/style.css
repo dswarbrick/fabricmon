@@ -20,6 +20,7 @@ table.node-info {
 table.node-info caption {
   font-weight: bold;
   text-align: left;
+  white-space: nowrap;
 }
 
 table.node-info th {
@@ -54,5 +55,5 @@ table.node-info th {
 .node text {
   pointer-events: none;
   font: 10px sans-serif;
-  fill: #666;
+  fill: #008;
 }

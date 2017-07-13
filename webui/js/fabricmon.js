@@ -24,8 +24,9 @@ function dragended(d) {
 }
 
 function clearSelection() {
-  viewPort.selectAll(".links").selectAll("line").style("opacity", 1);
+  viewPort.select(".links").selectAll("line").style("opacity", 1);
   viewPort.selectAll(".node").style("opacity", 1);
+  d3.selectAll("table.node-info td").text("-");
 }
 
 function handleNodeClick(d) {
@@ -33,9 +34,9 @@ function handleNodeClick(d) {
     connectedNodes = [d.index];
 
   console.log("Node clicked: ", d);
-  document.getElementById("sel_node_type").textContent = nodeTypes[d.nodetype];
-  document.getElementById("sel_node_guid").textContent = d.id;
-  document.getElementById("sel_node_desc").textContent = d.desc;
+  d3.select("#sel_node_type").text(nodeTypes[d.nodetype]);
+  d3.select("#sel_node_guid").text(d.id);
+  d3.select("#sel_node_desc").text(d.desc);
 
   // Build array of nodes that are linked to this node
   links.forEach(function (l) {
@@ -44,7 +45,7 @@ function handleNodeClick(d) {
   });
 
   // Adjust opacity of links depending on whether it is connected to this node
-  viewPort.selectAll(".links").selectAll("line").style("opacity", function(o) {
+  viewPort.select(".links").selectAll("line").style("opacity", function(o) {
     if (o.source.index == d.index || o.target.index == d.index)
       return 1;
     else
@@ -62,16 +63,23 @@ function handleNodeClick(d) {
   d3.event.stopPropagation();
 }
 
-function changeFabric(event) {
+function changeFabric() {
   // Clear existing fabric
   viewPort.selectAll("g").remove();
+
+  var jsonUrl = this.value;
+
+  if (jsonUrl === "")
+    return;
+  else
+    console.log("Loading " + jsonUrl);
 
   // Container group which will be used for zooming
   var g = viewPort.append("g");
 
   // Attach zoom event handler to <svg> element
   viewPort.call(d3.zoom()
-    .scaleExtent([0.5, 3])
+    .scaleExtent([0.5, 4])
     .on("zoom", function() { g.attr("transform", d3.event.transform); }));
 
   var bbox = viewPort.node().getBBox();
@@ -81,10 +89,10 @@ function changeFabric(event) {
       .distance(120)
       .id(function(d) { return d.id; }))
     .force("charge", d3.forceManyBody()
-      .strength(-80))
+      .strength(-500))
     .force("center", d3.forceCenter(bbox.width / 2, bbox.height / 2));
 
-  d3.json(event.target.value, function(error, graph) {
+  d3.json(jsonUrl, function(error, graph) {
     if (error) throw error;
 
     var link = g.append("g")
@@ -92,7 +100,12 @@ function changeFabric(event) {
       .selectAll("line")
       .data(graph.links)
       .enter().append("line")
-        .attr("stroke-width", function(d) { if (d.value) return Math.sqrt(d.value); else return 1; });
+        .attr("stroke-width", function(d) {
+          if (d.value)
+            return Math.sqrt(d.value);
+          else
+            return 1;
+        });
 
     var node = g.selectAll(".node")
       .data(graph.nodes)
@@ -101,7 +114,8 @@ function changeFabric(event) {
         .call(d3.drag()
           .on("start", dragstarted)
           .on("drag", dragged)
-          .on("end", dragended));
+          .on("end", dragended))
+        .on("click", handleNodeClick);
 
     node.append("image")
       .attr("xlink:href", function(d) {
@@ -129,8 +143,6 @@ function changeFabric(event) {
     node.append("title")
       .text(function(d) { return nodeTypes[d.nodetype] || "Unknown node type"; });
 
-    node.on("click", handleNodeClick);
-
     simulation
       .nodes(graph.nodes)
       .on("tick", ticked);
@@ -152,17 +164,14 @@ function changeFabric(event) {
 
 document.onreadystatechange = () => {
   if (document.readyState === 'complete') {
-    var sel = document.getElementById("fabric_select");
-
     // Populate fabric-select list
-    for (var x = 0; x < fabrics.length; x++) {
-      var option = document.createElement("option");
-      option.text = fabrics[x][0];
-      option.value = fabrics[x][1];
-      sel.add(option);
-    }
-
-    sel.addEventListener("change", changeFabric);
+    d3.select("#fabric_select")
+      .on("change", changeFabric)
+      .selectAll()
+      .data(fabrics).enter()
+        .append("option")
+          .attr("value", function(d) { return d[1]; })
+          .text(function(d) { return d[0]; });
 
     viewPort = d3.select("svg")
       .on("click", clearSelection);
