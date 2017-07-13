@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -244,6 +245,22 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 	writeBatch(conf, batch)
 }
 
+func umadGetCANames() []string {
+	var (
+		buf  [C.UMAD_CA_NAME_LEN][C.UMAD_MAX_DEVICES]byte
+		hcas = make([]string, 0, C.UMAD_MAX_DEVICES)
+	)
+
+	// Call umad_get_cas_names with pointer to first element in our buffer
+	numHCAs := C.umad_get_cas_names((*[C.UMAD_CA_NAME_LEN]C.char)(unsafe.Pointer(&buf[0])), C.UMAD_MAX_DEVICES)
+
+	for x := 0; x < int(numHCAs); x++ {
+		hcas = append(hcas, strings.TrimRight(string(buf[x][:]), "\x00"))
+	}
+
+	return hcas
+}
+
 func main() {
 	fabrics := make(FabricMap)
 
@@ -256,7 +273,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	caNames, _ := getCANames()
+	// Initialise umad library (also required in order to run under ibsim)
+	// FIXME: ibsim indicates that FabricMon is not "disconnecting" when it exits
+	if C.umad_init() < 0 {
+		fmt.Println("Error initialising umad library")
+		os.Exit(1)
+	}
+
+	caNames := umadGetCANames()
 	nnMap, _ := NewNodeNameMap()
 
 	for _, caName := range caNames {

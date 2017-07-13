@@ -8,6 +8,10 @@
  * hijacks libc functions such as scandir(3), which libibumad uses to enumerate HCAs found in sysfs.
  * Other libc functions like ioctl(2) and basic file IO functions (e.g., open(2), read(2) etc.) are
  * also hijacked to intercept operations on /dev/infiniband/* and /sys/class/infiniband/* entries.
+ *
+ * Go's ioutil.ReadDir() function results in a function call chain of:
+ *  os.Open -> os.OpenFile -> syscall.Open -> syscall.openat -> syscall.Syscall6(SYS_OPENAT, ...)
+ * The openat() call is not intercepted by the libumad2sim.so LD_PRELOAD.
  */
 package main
 
