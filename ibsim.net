@@ -1,25 +1,46 @@
-Switch	8	"sw1"
-[1]	"n101-1"[1]
-[2]	"n102-1"[1]
-[3]	"st101-1"[1]
-[4]	"st102-1"[1]
-[5]	"gw101-1"[1]
+vendid=0x0
+devid=0x0
+sysimgguid=0x3048ffff95fd1a
+switchguid=0x3048ffff95fd1a(3048ffff95fd1a)
+Switch	8 "S-003048ffff95fd1a"		# "sw1" base port 0 lid 1 lmc 0
+[1]	"H-003048ffff957274"[1](3048ffff957275) 		# "n101-1" lid 21 4xSDR
+[2]	"H-003048ffff95c8aa"[1](3048ffff95c8ab) 		# "n102-1" lid 27 4xSDR
+[3]	"H-003048ffff95317b"[1](3048ffff95317c) 		# "st101-1" lid 31 4xSDR
+[4]	"H-003048ffff95a8ab"[1](3048ffff95a8ac) 		# "st102-1" lid 35 4xSDR
+[5]	"H-003048ffff95d808"[1](3048ffff95d809) 		# "gw101-1" lid 42 4xSDR
 
-Hca		2	"n101-1"
-[1]	"sw1"[1]
+vendid=0x0
+devid=0x0
+sysimgguid=0x3048ffff95d808
+caguid=0x3048ffff95d808
+Ca	2 "H-003048ffff95d808"		# "gw101-1"
+[1](3048ffff95d809) 	"S-003048ffff95fd1a"[5]		# lid 42 lmc 0 "sw1" lid 1 4xSDR
 
-Hca		2	"n102-1"
-[1]	"sw1"[2]
+vendid=0x0
+devid=0x0
+sysimgguid=0x3048ffff95a8ab
+caguid=0x3048ffff95a8ab
+Ca	2 "H-003048ffff95a8ab"		# "st102-1"
+[1](3048ffff95a8ac) 	"S-003048ffff95fd1a"[4]		# lid 35 lmc 0 "sw1" lid 1 4xSDR
 
-Hca		2	"st101-1"
-[1]	"sw1"[3]
+vendid=0x0
+devid=0x0
+sysimgguid=0x3048ffff95317b
+caguid=0x3048ffff95317b
+Ca	2 "H-003048ffff95317b"		# "st101-1"
+[1](3048ffff95317c) 	"S-003048ffff95fd1a"[3]		# lid 31 lmc 0 "sw1" lid 1 4xSDR
 
-Hca		2	"st102-1"
-[1]	"sw1"[4]
+vendid=0x0
+devid=0x0
+sysimgguid=0x3048ffff95c8aa
+caguid=0x3048ffff95c8aa
+Ca	2 "H-003048ffff95c8aa"		# "n102-1"
+[1](3048ffff95c8ab) 	"S-003048ffff95fd1a"[2]		# lid 27 lmc 0 "sw1" lid 1 4xSDR
 
-Hca		2	"gw101-1"
-[1]	"sw1"[5]
-
-# perfquery will not work without a LID
-do baselid "sw1"[0] 1
+vendid=0x0
+devid=0x0
+sysimgguid=0x3048ffff957274
+caguid=0x3048ffff957274
+Ca	2 "H-003048ffff957274"		# "n101-1"
+[1](3048ffff957275) 	"S-003048ffff95fd1a"[1]		# lid 21 lmc 0 "sw1" lid 1 4xSDR
 
