@@ -1,9 +1,8 @@
-/*
- * FabricMon - an InfiniBand fabric monitor daemon.
- * Copyright 2017 Daniel Swarbrick
- *
- * Functions analogous to libosmcomp
- */
+// Copyright 2017 Daniel Swarbrick. All rights reserved.
+// Use of this source code is governed by a GPL license that can be found in the LICENSE file.
+
+// Functions analogous to libosmcomp.
+
 package main
 
 import (

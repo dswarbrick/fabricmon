@@ -1,10 +1,9 @@
-/*
- * FabricMon - an InfiniBand fabric monitor daemon.
- * Copyright 2017 Daniel Swarbrick
- *
- * InfluxDB client functions
- * TODO: Add support for specifying retention policy
- */
+// Copyright 2017 Daniel Swarbrick. All rights reserved.
+// Use of this source code is governed by a GPL license that can be found in the LICENSE file.
+
+// InfluxDB client functions.
+// TODO: Add support for specifying retention policy.
+
 package main
 
 import (

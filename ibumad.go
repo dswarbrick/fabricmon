@@ -1,18 +1,17 @@
-/*
- * FabricMon - an InfiniBand fabric monitor daemon.
- * Copyright 2017 Daniel Swarbrick
- *
- * Functions analogous to libibumad
- *
- * Note: Fabricmon cannot currently be run in an ibsim environment. The libumad2sim.so LD_PRELOAD
- * hijacks libc functions such as scandir(3), which libibumad uses to enumerate HCAs found in sysfs.
- * Other libc functions like ioctl(2) and basic file IO functions (e.g., open(2), read(2) etc.) are
- * also hijacked to intercept operations on /dev/infiniband/* and /sys/class/infiniband/* entries.
- *
- * Go's ioutil.ReadDir() function results in a function call chain of:
- *  os.Open -> os.OpenFile -> syscall.Open -> syscall.openat -> syscall.Syscall6(SYS_OPENAT, ...)
- * The openat() call is not intercepted by the libumad2sim.so LD_PRELOAD.
- */
+// Copyright 2017 Daniel Swarbrick. All rights reserved.
+// Use of this source code is governed by a GPL license that can be found in the LICENSE file.
+
+// Functions analogous to libibumad.
+// Note: Fabricmon cannot currently be run in an ibsim environment. The libumad2sim.so LD_PRELOAD
+// hijacks libc functions such as scandir(3), which libibumad uses to enumerate HCAs found in
+// sysfs. Other libc functions like ioctl(2) and basic file IO functions (e.g., open(2), read(2)
+// etc.) are also hijacked to intercept operations on /dev/infiniband/* and /sys/class/infiniband/*
+// entries.
+//
+// Go's ioutil.ReadDir() function results in a function call chain of:
+//   os.Open -> os.OpenFile -> syscall.Open -> syscall.openat -> syscall.Syscall6(SYS_OPENAT, ...)
+// The openat() call is not intercepted by the libumad2sim.so LD_PRELOAD.
+
 package main
 
 import "io/ioutil"

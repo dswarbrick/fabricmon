@@ -1,9 +1,8 @@
-/*
- * FabricMon - an InfiniBand fabric monitor daemon.
- * Copyright 2017 Daniel Swarbrick
- *
- * JSON structs / serialisation for d3.js force graph & HTTP request handling
- */
+// Copyright 2017 Daniel Swarbrick. All rights reserved.
+// Use of this source code is governed by a GPL license that can be found in the LICENSE file.
+
+// JSON structs / serialisation for d3.js force graph & HTTP request handling.
+
 package main
 
 import (

@@ -1,12 +1,12 @@
-/*
- * FabricMon - an InfiniBand fabric monitor daemon.
- * Copyright 2017 Daniel Swarbrick
- *
- * Low-level bit operations
- * Portions Copyright 2017 The Go Authors. All rights reserved.
- *
- * TODO: Deprecate swapUint..() in favour of bits.ReverseBytes() from upcoming math/bits package
- */
+// Copyright 2017 Daniel Swarbrick. All rights reserved.
+// Use of this source code is governed by a GPL license that can be found in the LICENSE file.
+//
+// Portions Copyright 2017 The Go Authors. All rights reserved.
+
+
+// Low-level bit operations.
+// TODO: Deprecate swapUint..() in favour of bits.ReverseBytes() from upcoming math/bits package.
+
 package main
 
 import (

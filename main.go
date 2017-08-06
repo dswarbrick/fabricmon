@@ -1,13 +1,14 @@
-/*
- * FabricMon - an InfiniBand fabric monitor daemon.
- * Copyright 2017 Daniel Swarbrick
- *
- * cgo wrapper around libibumad / libibnetdiscover
- * Note: Due to the usual permissions on /dev/infiniband/umad*, this will probably need to be
- * executed as root.
- *
- * TODO: Implement user-friendly display of link / speed / rate etc. (see ib_types.h)
- */
+// Copyright 2017 Daniel Swarbrick. All rights reserved.
+// Use of this source code is governed by a GPL license that can be found in the LICENSE file.
+
+// cgo wrapper around libibumad / libibnetdiscover.
+// Note: Due to the usual permissions on /dev/infiniband/umad*, this will probably need to be
+// executed as root.
+//
+// TODO: Implement user-friendly display of link / speed / rate etc. (see ib_types.h).
+
+// Package FabricMon is an InfiniBand fabric monitor daemon.
+//
 package main
 
 // #cgo CFLAGS: -I/usr/include/infiniband
