@@ -350,6 +350,8 @@ func main() {
 
 				fabrics[caName][portNum].mutex.Unlock()
 			}
+
+			C.umad_release_ca(&ca)
 		}
 
 		C.free(unsafe.Pointer(ca_name))
@@ -357,4 +359,6 @@ func main() {
 
 	// Start HTTP server to serve JSON for d3.js (WIP)
 	//serve(conf.BindAddress, fabrics)
+
+	C.umad_done()
 }
