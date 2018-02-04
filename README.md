@@ -1,5 +1,4 @@
-FabricMon
-=========
+# FabricMon
 
 FabricMon is an InfiniBand fabric monitoring daemon written in Go. It uses cgo
 to call low-level functions in libibmad, libibumad, and libibnetdiscover.
@@ -16,8 +15,8 @@ an SVG force graph.
 
 This project is a work in progress, in the early stages of development.
 
-Building FabricMon
-------------------
+## Building FabricMon
+
 To build FabricMon, you will require the following development libraries
 (Debian package names shown):
 
@@ -29,8 +28,13 @@ To build FabricMon, you will require the following development libraries
 The corresponding runtime libraries will be required on the target system
 unless you build the FabricMon binary with static linking.
 
-InfiniBand Counters
--------------------
+## InfiniBand Counters
+
 Note that counters that represent data (e.g. PortXmitData and PortRcvData) are
 divided by four (lanes). See https://community.mellanox.com/docs/DOC-2572 for
 more information.
+
+## Future Plans
+
+* Subscribe to SM traps 128 (link state change) and 144 (port capabilities
+  change), to avoid performing full sweep upon each HTTP request.
