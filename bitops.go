@@ -25,7 +25,8 @@ func init() {
 }
 
 func log2b(x uint) uint {
-	return bits.Len(x) - 1
+	// FIXME: This can wrap if bits.Len() returns zero
+	return uint(bits.Len(x) - 1)
 }
 
 // ntohs converts a uint16 from network byte order to host byte order

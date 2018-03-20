@@ -61,6 +61,21 @@ The following counters are *less than* 32 bits wide:
 
 (cf. Table 247, InfiniBand Architecture Release 1.3, Volume I)
 
+## Testing
+
+Start ibsim:
+
+```
+$ ibsim -s ibsim.net
+```
+
+Run fabricmon with an LD_PRELOAD, so that it will connect to the simulated
+fabric:
+
+```
+$ LD_PRELOAD=/usr/lib/umad2sim/libumad2sim.so go run *.go
+```
+
 ## Future Plans
 
 * Subscribe to SM traps 128 (link state change) and 144 (port capabilities
