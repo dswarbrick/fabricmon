@@ -1,8 +1,5 @@
-// Copyright 2017 Daniel Swarbrick. All rights reserved.
+// Copyright 2017-18 Daniel Swarbrick. All rights reserved.
 // Use of this source code is governed by a GPL license that can be found in the LICENSE file.
-//
-// Portions Copyright 2017 The Go Authors. All rights reserved.
-
 
 // Low-level bit operations.
 
@@ -27,30 +24,8 @@ func init() {
 	}
 }
 
-func bitLen(x uint) (n uint) {
-	for ; x >= 0x8000; x >>= 16 {
-		n += 16
-	}
-	if x >= 0x80 {
-		x >>= 8
-		n += 8
-	}
-	if x >= 0x8 {
-		x >>= 4
-		n += 4
-	}
-	if x >= 0x2 {
-		x >>= 2
-		n += 2
-	}
-	if x >= 0x1 {
-		n++
-	}
-	return
-}
-
 func log2b(x uint) uint {
-	return bitLen(x) - 1
+	return bits.Len(x) - 1
 }
 
 // ntohs converts a uint16 from network byte order to host byte order
