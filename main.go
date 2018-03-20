@@ -23,13 +23,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unsafe"
-
-	influxdb "github.com/influxdata/influxdb/client/v2"
 )
 
 const PMA_TIMEOUT = 0
@@ -154,20 +150,8 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 
 // iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only switch
 // nodes.
-func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName string, portNum int) {
-	// Batch to hold InfluxDB points
-	batch, err := influxdb.NewBatchPoints(influxdb.BatchPointsConfig{
-		Database:  conf.Database,
-		Precision: "s",
-	})
-	if err != nil {
-		return
-	}
-
-	hostname, _ := os.Hostname()
-	tags := map[string]string{"host": hostname, "hca": caName, "src_port": strconv.Itoa(portNum)}
-	fields := map[string]interface{}{}
-	now := time.Now()
+func iterateSwitches(f *Fabric, nnMap *NodeNameMap) []Node {
+	nodes := make([]Node, 0)
 
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
@@ -188,8 +172,6 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 				node._type, nnMap.remapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
 				node.numports, node.guid)
 
-			tags["guid"] = fmt.Sprintf("%016x", node.guid)
-
 			C.ib_portid_set(&portid, C.int(node.smalid), 0, 0)
 
 			// node.ports is an array of pointers, in which any port may be null. We use pointer
@@ -199,7 +181,7 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 			var myNode Node
 
 			myNode.guid = uint64(node.guid)
-			myNode.ports = make([]Port, node.numports + 1)
+			myNode.ports = make([]Port, node.numports+1)
 
 			for portNum := 0; portNum <= int(node.numports); portNum++ {
 				// Get pointer to port struct and increment arrayPtr to next pointer
@@ -221,7 +203,6 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 				// TODO: Rework portState checking to optionally decode counters regardless of portState
 				if portState != C.IB_LINK_DOWN {
 					fmt.Printf("port %#v\n", pp)
-					tags["port"] = fmt.Sprintf("%d", portNum)
 
 					// This should not be nil if the link is up, but check anyway
 					// FIXME: portState may be polling / armed etc, and rp will be null!
@@ -249,28 +230,8 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 					}
 
 					// Get counters for a single port
-					counters, err := getPortCounters(&portid, portNum, f.ibmadPort)
-					if err == nil {
+					if counters, err := getPortCounters(&portid, portNum, f.ibmadPort); err == nil {
 						myPort.counters = counters
-
-						for counter, value := range myPort.counters {
-							switch value.(type) {
-							case uint32:
-								tags["counter"] = stdCounterMap[counter]
-								fields["value"] = value
-							case uint64:
-								tags["counter"] = extCounterMap[counter]
-
-								// FIXME: InfluxDB < 1.6 does not support uint64
-								// (https://github.com/influxdata/influxdb/pull/8923)
-								// Workaround is to either convert to int64 (i.e., truncate to 63 bits),
-								fields["value"] = int64(value.(uint64))
-							}
-
-							if point, err := influxdb.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
-								batch.AddPoint(point)
-							}
-						}
 					}
 				}
 
@@ -278,11 +239,11 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 			}
 
 			fmt.Printf("%#v\n", myNode)
+			nodes = append(nodes, myNode)
 		}
 	}
 
-	fmt.Printf("InfluxDB batch contains %d points\n", len(batch.Points()))
-	writeBatch(conf, batch)
+	return nodes
 }
 
 func umadGetCANames() []string {
@@ -384,7 +345,8 @@ func main() {
 				fmt.Printf("ibmad_port: %#v\n", fabrics[caName][portNum].ibmadPort)
 
 				// Walk switch nodes in fabric
-				iterateSwitches(fabrics[caName][portNum], &nnMap, conf.InfluxDB, caName, portNum)
+				nodes := iterateSwitches(fabrics[caName][portNum], &nnMap)
+				writeInfluxDB(nodes, conf.InfluxDB, caName, portNum)
 
 				fabrics[caName][portNum].mutex.Lock()
 
