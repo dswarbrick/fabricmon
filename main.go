@@ -21,6 +21,7 @@ import "C"
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -88,6 +89,59 @@ func getCounterUint64(buf *C.uint8_t, counter uint32) (v uint64) {
 	return v
 }
 
+// getPortCounters retrieves all counters for a specific port.
+func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibmad_port) (map[uint32]interface{}, error) {
+	var buf [1024]byte
+
+	counters := make(map[uint32]interface{})
+
+	// PerfMgt ClassPortInfo is a required attribute
+	pmaBuf := C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.CLASS_PORT_INFO, ibmadPort)
+
+	if pmaBuf == nil {
+		return counters, fmt.Errorf("ERROR: CLASS_PORT_INFO query failed!")
+	}
+
+	capMask := nativeEndian.Uint16(buf[2:4])
+	log.Printf("Cap Mask: %#02x\n", ntohs(capMask))
+
+	// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and
+	// PortRcvDataSL, components that represent Data (e.g. PortXmitData and
+	// PortRcvData) indicate octets divided by 4 rather than just octets.
+
+	// Fetch standard (32 bit, some 16 bit) counters
+	pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, ibmadPort)
+
+	if pmaBuf != nil {
+		// Iterate over standard counters
+		for counter, _ := range stdCounterMap {
+			if (counter == C.IB_PC_XMT_WAIT_F) && (capMask&C.IB_PM_PC_XMIT_WAIT_SUP == 0) {
+				continue // Counter not supported
+			}
+
+			counters[counter] = getCounterUint32(pmaBuf, counter)
+		}
+	}
+
+	if (capMask&C.IB_PM_EXT_WIDTH_SUPPORTED == 0) && (capMask&C.IB_PM_EXT_WIDTH_NOIETF_SUP == 0) {
+		// TODO: Fetch standard data / packet counters if extended counters are not
+		// supported (unlikely)
+		log.Println("Port does not support extended counters")
+		return counters, nil
+	}
+
+	// Fetch extended (64 bit) counters
+	pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS_EXT, ibmadPort)
+
+	if pmaBuf != nil {
+		for counter, _ := range extCounterMap {
+			counters[counter] = getCounterUint64(pmaBuf, counter)
+		}
+	}
+
+	return counters, nil
+}
+
 // iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only switch
 // nodes.
 func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName string, portNum int) {
@@ -149,8 +203,6 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 
 				// TODO: Rework portState checking to optionally decode counters regardless of portState
 				if portState != C.IB_LINK_DOWN {
-					var buf [1024]byte
-
 					fmt.Printf("port %#v\n", pp)
 					tags["port"] = fmt.Sprintf("%d", portNum)
 
@@ -179,58 +231,21 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 						f.topology.Links = append(f.topology.Links, d3Link{fmt.Sprintf("%016x", node.guid), fmt.Sprintf("%016x", rp.node.guid)})
 					}
 
-					// PerfMgt ClassPortInfo is a required attribute
-					pmaBuf := C.pma_query_via(unsafe.Pointer(&buf), &portid, C.int(portNum), PMA_TIMEOUT, C.CLASS_PORT_INFO, f.ibmadPort)
+					counters, err := getPortCounters(&portid, portNum, f.ibmadPort)
+					if err == nil {
+						for counter, value := range counters {
+							switch value.(type) {
+							case uint32:
+								tags["counter"] = stdCounterMap[counter]
+								fields["value"] = value
+							case uint64:
+								tags["counter"] = extCounterMap[counter]
 
-					if pmaBuf == nil {
-						fmt.Printf("ERROR: CLASS_PORT_INFO query failed!")
-						continue
-					}
-
-					capMask := nativeEndian.Uint16(buf[2:4])
-					fmt.Printf("Cap Mask: %#02x\n", ntohs(capMask))
-
-					// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and
-					// PortRcvDataSL, components that represent Data (e.g. PortXmitData and
-					// PortRcvData) indicate octets divided by 4 rather than just octets.
-
-					// Fetch standard (32 bit, some 16 bit) counters
-					pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), &portid, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, f.ibmadPort)
-
-					if pmaBuf != nil {
-						// Iterate over standard counters
-						for counter, displayName := range stdCounterMap {
-							if (counter == C.IB_PC_XMT_WAIT_F) && (capMask&C.IB_PM_PC_XMIT_WAIT_SUP == 0) {
-								continue // Counter not supported
+								// FIXME: InfluxDB < 1.6 does not support uint64
+								// (https://github.com/influxdata/influxdb/pull/8923)
+								// Workaround is to either convert to int64 (i.e., truncate to 63 bits),
+								fields["value"] = int64(value.(uint64))
 							}
-
-							tags["counter"] = displayName
-							fields["value"] = getCounterUint32(pmaBuf, counter)
-							if point, err := influxdb.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
-								batch.AddPoint(point)
-							}
-						}
-					}
-
-					if (capMask&C.IB_PM_EXT_WIDTH_SUPPORTED == 0) && (capMask&C.IB_PM_EXT_WIDTH_NOIETF_SUP == 0) {
-						// TODO: Fetch standard data / packet counters if extended counters are not
-						// supported (unlikely)
-						fmt.Println("No extended counter support indicated")
-						continue
-					}
-
-					// Fetch extended (64 bit) counters
-					pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), &portid, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS_EXT, f.ibmadPort)
-
-					if pmaBuf != nil {
-						for counter, displayName := range extCounterMap {
-							tags["counter"] = displayName
-
-							// FIXME: InfluxDB < 1.6 does not support uint64
-							// (https://github.com/influxdata/influxdb/pull/8923)
-							// Workaround is to either convert to int64 (i.e., truncate to 63 bits),
-							// or convert to Float64 and sacrifice accuracy.
-							fields["value"] = int64(getCounterUint64(pmaBuf, counter))
 
 							if point, err := influxdb.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
 								batch.AddPoint(point)
@@ -307,9 +322,12 @@ func main() {
 			fmt.Printf("%s: %#v\n\n", caName, ca)
 
 			// Iterate over HCA's ports and perform fabric discovery from each
-			// FIXME: This is incompatible with how ibsim works, which reports 0 ports, yet actually
-			// populates ca.ports[0] with a valid struct
+			// TODO: Check whether real IB environments return null entries in ca.ports
 			for _, v := range ca.ports {
+				if v == nil {
+					continue
+				}
+
 				portNum := int(v.portnum)
 
 				fmt.Printf("port %d: %#v\n\n", portNum, ca.ports[portNum])
