@@ -56,7 +56,10 @@ The following counters are *less than* 32 bits wide:
 | PortRcvConstraintErrors      | 8    |
 | LocalLinkIntegrityErrors     | 4    |
 | ExcessiveBufferOverrunErrors | 4    |
+| QP1Dropped                   | 16   |
 | VL15Dropped                  | 16   |
+
+(cf. Table 247, InfiniBand Architecture Release 1.3, Volume I)
 
 ## Future Plans
 
