@@ -30,9 +30,33 @@ unless you build the FabricMon binary with static linking.
 
 ## InfiniBand Counters
 
+InfiniBand port counters do not automatically wrap when they reach their
+maximum possible value, and instead latch with all bits set to one. In the case
+of the 64-bit extended counters, this is likely to take a very long time, but
+some of the error counters are 16, 8 or even 4 bits wide.
+
 Note that counters that represent data (e.g. PortXmitData and PortRcvData) are
 divided by four (lanes). See https://community.mellanox.com/docs/DOC-2572 for
 more information.
+
+### Error Counters
+
+The following counters are *less than* 32 bits wide:
+
+| Counter                      | Bits |
+| ---------------------------- | ---- |
+| SymbolErrorCounter           | 16   |
+| LinkErrorRecoveryCounter     | 8    |
+| LinkDownedCounter            | 8    |
+| PortRcvErrors                | 16   |
+| PortRcvRemotePhysicalErrors  | 16   |
+| PortRcvSwitchRelayErrors     | 16   |
+| PortXmitDiscards             | 16   |
+| PortXmitContraintErrors      | 8    |
+| PortRcvConstraintErrors      | 8    |
+| LocalLinkIntegrityErrors     | 4    |
+| ExcessiveBufferOverrunErrors | 4    |
+| VL15Dropped                  | 16   |
 
 ## Future Plans
 
