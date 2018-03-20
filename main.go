@@ -88,7 +88,7 @@ func getCounterUint64(buf *C.uint8_t, counter uint32) (v uint64) {
 	return v
 }
 
-// iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only swtich
+// iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only switch
 // nodes
 func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName string, portNum int) {
 	// Batch to hold InfluxDB points
@@ -226,8 +226,8 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 						for counter, displayName := range extCounterMap {
 							tags["counter"] = displayName
 
-							// FIXME: InfluxDB does not support uint64
-							// (https://github.com/influxdata/influxdb/issues/7801)
+							// FIXME: InfluxDB < 1.6 does not support uint64
+							// (https://github.com/influxdata/influxdb/pull/8923)
 							// Workaround is to either convert to int64 (i.e., truncate to 63 bits),
 							// or convert to Float64 and sacrifice accuracy.
 							fields["value"] = int64(getCounterUint64(pmaBuf, counter))
