@@ -44,6 +44,16 @@ type Fabric struct {
 // FabricMap is a two-dimensional map holding the Fabric struct for each HCA / port pair.
 type FabricMap map[string]map[int]*Fabric
 
+type Node struct {
+	guid  uint64
+	ports []Port
+}
+
+type Port struct {
+	guid     uint64
+	counters map[uint32]interface{}
+}
+
 // Standard (32-bit) counters and their display names
 // TODO: Implement warnings and / or automatically reset counters when they are close to reaching
 // 	     their maximum permissible value (according to IBTA spec).
@@ -186,10 +196,17 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 			// arithmetic to get pointer to port struct.
 			arrayPtr := uintptr(unsafe.Pointer(node.ports))
 
+			var myNode Node
+
+			myNode.guid = uint64(node.guid)
+			myNode.ports = make([]Port, node.numports + 1)
+
 			for portNum := 0; portNum <= int(node.numports); portNum++ {
 				// Get pointer to port struct and increment arrayPtr to next pointer
 				pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))
 				arrayPtr += unsafe.Sizeof(arrayPtr)
+
+				myPort := Port{guid: uint64(pp.guid)}
 
 				portState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_STATE_F)
 				physState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_PHYS_STATE_F)
@@ -231,9 +248,12 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 						f.topology.Links = append(f.topology.Links, d3Link{fmt.Sprintf("%016x", node.guid), fmt.Sprintf("%016x", rp.node.guid)})
 					}
 
+					// Get counters for a single port
 					counters, err := getPortCounters(&portid, portNum, f.ibmadPort)
 					if err == nil {
-						for counter, value := range counters {
+						myPort.counters = counters
+
+						for counter, value := range myPort.counters {
 							switch value.(type) {
 							case uint32:
 								tags["counter"] = stdCounterMap[counter]
@@ -253,7 +273,11 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName st
 						}
 					}
 				}
+
+				myNode.ports[portNum] = myPort
 			}
+
+			fmt.Printf("%#v\n", myNode)
 		}
 	}
 
