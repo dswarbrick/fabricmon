@@ -40,7 +40,7 @@ type Fabric struct {
 	topology   d3Topology
 }
 
-// FabricMap is a two-dimensional map holding the Fabric struct for each HCA / port pair
+// FabricMap is a two-dimensional map holding the Fabric struct for each HCA / port pair.
 type FabricMap map[string]map[int]*Fabric
 
 // Standard (32-bit) counters and their display names
@@ -62,7 +62,7 @@ var stdCounterMap = map[uint32]string{
 	C.IB_PC_XMT_WAIT_F:       "PortXmitWait", // Requires cap mask IB_PM_PC_XMIT_WAIT_SUP
 }
 
-// Extended (64-bit) counters and their display names
+// Extended (64-bit) counters and their display names.
 var extCounterMap = map[uint32]string{
 	C.IB_PC_EXT_XMT_BYTES_F: "PortXmitData",
 	C.IB_PC_EXT_RCV_BYTES_F: "PortRcvData",
@@ -75,21 +75,21 @@ var extCounterMap = map[uint32]string{
 }
 
 // getCounterUint32 decodes the specified counter from the supplied buffer and returns the uint32
-// counter value
+// counter value.
 func getCounterUint32(buf *C.uint8_t, counter uint32) (v uint32) {
 	C.mad_decode_field(buf, counter, unsafe.Pointer(&v))
 	return v
 }
 
 // getCounterUint64 decodes the specified counter from the supplied buffer and returns the uint64
-// counter value
+// counter value.
 func getCounterUint64(buf *C.uint8_t, counter uint32) (v uint64) {
 	C.mad_decode_field(buf, counter, unsafe.Pointer(&v))
 	return v
 }
 
 // iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only switch
-// nodes
+// nodes.
 func iterateSwitches(f *Fabric, nnMap *NodeNameMap, conf influxdbConf, caName string, portNum int) {
 	// Batch to hold InfluxDB points
 	batch, err := influxdb.NewBatchPoints(influxdb.BatchPointsConfig{
@@ -309,7 +309,9 @@ func main() {
 			// Iterate over HCA's ports and perform fabric discovery from each
 			// FIXME: This is incompatible with how ibsim works, which reports 0 ports, yet actually
 			// populates ca.ports[0] with a valid struct
-			for portNum := 1; ca.ports[portNum] != nil; portNum++ {
+			for _, v := range ca.ports {
+				portNum := int(v.portnum)
+
 				fmt.Printf("port %d: %#v\n\n", portNum, ca.ports[portNum])
 				fabrics[caName][portNum] = &Fabric{}
 
@@ -326,14 +328,16 @@ func main() {
 				mgmt_classes := [3]C.int{C.IB_SMI_CLASS, C.IB_SA_CLASS, C.IB_PERFORMANCE_CLASS}
 
 				// struct ibmad_port *mad_rpc_open_port(char *dev_name, int dev_port, int *mgmt_classes, int num_classes)
-				fabrics[caName][portNum].ibmadPort, err = C.mad_rpc_open_port(
-					ca_name, C.int(portNum), &mgmt_classes[0], C.int(len(mgmt_classes)))
+				port := C.mad_rpc_open_port(ca_name, v.portnum, &mgmt_classes[0], C.int(len(mgmt_classes)))
 
-				// FIXME: Make this compatible with ibsim
-				if err != nil {
-					fmt.Println("Unable to open MAD port:", err)
-					os.Exit(1)
+				if port == nil {
+					// TODO: Delay ibnd_discover_fabric until we have successfully opened the port
+					fmt.Println("Unable to open MAD port: %s: %d", caName, v.portnum)
+					C.ibnd_destroy_fabric(fabrics[caName][portNum].ibndFabric)
+					continue
 				}
+
+				fabrics[caName][portNum].ibmadPort = port
 
 				fmt.Printf("ibmad_port: %#v\n", fabrics[caName][portNum].ibmadPort)
 
