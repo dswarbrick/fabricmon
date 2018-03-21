@@ -42,13 +42,16 @@ type Fabric struct {
 type FabricMap map[string]map[int]*Fabric
 
 type Node struct {
-	guid  uint64
-	ports []Port
+	guid     uint64
+	nodeType int
+	nodeDesc string
+	ports    []Port
 }
 
 type Port struct {
-	guid     uint64
-	counters map[uint32]interface{}
+	guid       uint64
+	remoteGuid uint64
+	counters   map[uint32]interface{}
 }
 
 // Standard (32-bit) counters and their display names
@@ -158,13 +161,11 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) []Node {
 	defer f.mutex.Unlock()
 
 	for node := f.ibndFabric.nodes; node != nil; node = node.next {
-		d3n := d3Node{
-			Id:       fmt.Sprintf("%016x", node.guid),
-			NodeType: int(node._type),
-			Desc:     nnMap.remapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
+		myNode := Node{
+			guid:     uint64(node.guid),
+			nodeType: int(node._type),
+			nodeDesc: C.GoString(&node.nodedesc[0]),
 		}
-
-		f.topology.Nodes = append(f.topology.Nodes, d3n)
 
 		if node._type == C.IB_NODE_SWITCH {
 			var portid C.ib_portid_t
@@ -179,9 +180,6 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) []Node {
 			// arithmetic to get pointer to port struct.
 			arrayPtr := uintptr(unsafe.Pointer(node.ports))
 
-			var myNode Node
-
-			myNode.guid = uint64(node.guid)
 			myNode.ports = make([]Port, node.numports+1)
 
 			for portNum := 0; portNum <= int(node.numports); portNum++ {
@@ -213,6 +211,8 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) []Node {
 							rp.node._type, rp.node.guid,
 							nnMap.remapNodeName(uint64(node.guid), C.GoString(&rp.node.nodedesc[0])))
 
+						myPort.remoteGuid = uint64(rp.node.guid)
+
 						// Determine max width supported by both ends
 						maxWidth := uint(1 << log2b(uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)&
 							C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F))))
@@ -226,8 +226,6 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) []Node {
 						if uint(linkSpeed) != maxSpeed {
 							fmt.Println("NOTICE: Link speed is not the max speed supported by both ports")
 						}
-
-						f.topology.Links = append(f.topology.Links, d3Link{fmt.Sprintf("%016x", node.guid), fmt.Sprintf("%016x", rp.node.guid)})
 					}
 
 					// Get counters for a single port
@@ -240,8 +238,9 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) []Node {
 			}
 
 			fmt.Printf("%#v\n", myNode)
-			nodes = append(nodes, myNode)
 		}
+
+		nodes = append(nodes, myNode)
 	}
 
 	return nodes
@@ -351,6 +350,7 @@ func main() {
 				// Walk switch nodes in fabric
 				nodes := iterateSwitches(fabrics[caName][portNum], &nnMap)
 				writeInfluxDB(nodes, conf.InfluxDB, caName, portNum)
+				makeD3(nodes)
 
 				fabrics[caName][portNum].mutex.Lock()
 

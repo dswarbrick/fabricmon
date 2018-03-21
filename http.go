@@ -17,22 +17,6 @@ import (
 	"strings"
 )
 
-type d3Node struct {
-	Id       string `json:"id"`
-	Desc     string `json:"desc"`
-	NodeType int    `json:"nodetype"`
-}
-
-type d3Link struct {
-	Source string `json:"source"`
-	Target string `json:"target"`
-}
-
-type d3Topology struct {
-	Nodes []d3Node `json:"nodes"`
-	Links []d3Link `json:"links"`
-}
-
 type gzipResponseWriter struct {
 	io.Writer
 	http.ResponseWriter
@@ -89,6 +73,7 @@ func marshalTopology(w http.ResponseWriter, req *http.Request) {
 	f.mutex.RLock()
 	defer f.mutex.RUnlock()
 
+	// FIXME: This is no longer populated - call makeD3() instead.
 	jsonBuf, err := json.Marshal(f.topology)
 	if err != nil {
 		log.Println("JSON error:", err)
