@@ -1,46 +1,74 @@
+#
+# Topology file: generated on Wed Mar 21 17:10:21 2018
+#
+# Initiated from node 003048ffff5812fc port 003048ffff5812fc
+
 vendid=0x0
 devid=0x0
 sysimgguid=0x3048ffff95fd1a
 switchguid=0x3048ffff95fd1a(3048ffff95fd1a)
-Switch	8 "S-003048ffff95fd1a"		# "sw1" base port 0 lid 1 lmc 0
-[1]	"H-003048ffff957274"[1](3048ffff957275) 		# "n101-1" lid 21 4xQDR s=4
-[2]	"H-003048ffff95c8aa"[1](3048ffff95c8ab) 		# "n102-1" lid 27 4xQDR s=4
-[3]	"H-003048ffff95317b"[1](3048ffff95317c) 		# "st101-1" lid 31 4xQDR s=4
-[4]	"H-003048ffff95a8ab"[1](3048ffff95a8ac) 		# "st102-1" lid 35 4xQDR s=4
-[5]	"H-003048ffff95d808"[1](3048ffff95d809) 		# "gw101-1" lid 42 4xQDR s=4
+Switch	8 "S-003048ffff95fd1a"		# "sw1" base port 0 lid 0 lmc 0
+[1]	"H-003048ffff95d808"[1](3048ffff95d809) 		# "gw101-1" lid 0 4xQDR s=4 w=2 v=4
+[2]	"H-003048ffff95317b"[1](3048ffff95317c) 		# "st101-1" lid 0 4xQDR s=4 w=2 v=4
+[3]	"H-003048ffff95a8ab"[1](3048ffff95a8ac) 		# "st102-1" lid 0 4xQDR s=4 w=2 v=4
+[4]	"H-003048ffff957274"[1](3048ffff957275) 		# "n101-1" lid 0 4xQDR s=4 w=2 v=4
+[5]	"H-003048ffff95c8aa"[1](3048ffff95c8ab) 		# "n102-1" lid 0 4xQDR s=4 w=2 v=4
+[8]	"S-003048ffff5812fc"[8]		# "sw2" lid 0 4xQDR s=4 w=2 v=4
 
 vendid=0x0
 devid=0x0
-sysimgguid=0x3048ffff95d808
-caguid=0x3048ffff95d808
-Ca	2 "H-003048ffff95d808"		# "gw101-1"
-[1](3048ffff95d809) 	"S-003048ffff95fd1a"[5]		# lid 42 lmc 0 "sw1" lid 1 4xQDR s=4
-
-vendid=0x0
-devid=0x0
-sysimgguid=0x3048ffff95a8ab
-caguid=0x3048ffff95a8ab
-Ca	2 "H-003048ffff95a8ab"		# "st102-1"
-[1](3048ffff95a8ac) 	"S-003048ffff95fd1a"[4]		# lid 35 lmc 0 "sw1" lid 1 4xQDR s=4
-
-vendid=0x0
-devid=0x0
-sysimgguid=0x3048ffff95317b
-caguid=0x3048ffff95317b
-Ca	2 "H-003048ffff95317b"		# "st101-1"
-[1](3048ffff95317c) 	"S-003048ffff95fd1a"[3]		# lid 31 lmc 0 "sw1" lid 1 4xQDR s=4
+sysimgguid=0x3048ffff5812fc
+switchguid=0x3048ffff5812fc(3048ffff5812fc)
+Switch	8 "S-003048ffff5812fc"		# "sw2" base port 0 lid 0 lmc 0
+[1]	"H-003048ffff9386f1"[1](3048ffff9386f2) 		# "gw201-1" lid 0 4xQDR s=4 w=2 v=4
+[2]	"H-003048ffff9493f1"[1](3048ffff9493f2) 		# "st201-1" lid 0 4xQDR s=4 w=2 v=4
+[8]	"S-003048ffff95fd1a"[8]		# "sw1" lid 0 4xQDR s=4 w=2 v=4
 
 vendid=0x0
 devid=0x0
 sysimgguid=0x3048ffff95c8aa
 caguid=0x3048ffff95c8aa
 Ca	2 "H-003048ffff95c8aa"		# "n102-1"
-[1](3048ffff95c8ab) 	"S-003048ffff95fd1a"[2]		# lid 27 lmc 0 "sw1" lid 1 4xQDR s=4
+[1](3048ffff95c8ab) 	"S-003048ffff95fd1a"[5]		# lid 0 lmc 0 "sw1" lid 0 4xQDR s=4 w=2 v=4
 
 vendid=0x0
 devid=0x0
 sysimgguid=0x3048ffff957274
 caguid=0x3048ffff957274
 Ca	2 "H-003048ffff957274"		# "n101-1"
-[1](3048ffff957275) 	"S-003048ffff95fd1a"[1]		# lid 21 lmc 0 "sw1" lid 1 4xQDR s=4
+[1](3048ffff957275) 	"S-003048ffff95fd1a"[4]		# lid 0 lmc 0 "sw1" lid 0 4xQDR s=4 w=2 v=4
 
+vendid=0x0
+devid=0x0
+sysimgguid=0x3048ffff95a8ab
+caguid=0x3048ffff95a8ab
+Ca	2 "H-003048ffff95a8ab"		# "st102-1"
+[1](3048ffff95a8ac) 	"S-003048ffff95fd1a"[3]		# lid 0 lmc 0 "sw1" lid 0 4xQDR s=4 w=2 v=4
+
+vendid=0x0
+devid=0x0
+sysimgguid=0x3048ffff95317b
+caguid=0x3048ffff95317b
+Ca	2 "H-003048ffff95317b"		# "st101-1"
+[1](3048ffff95317c) 	"S-003048ffff95fd1a"[2]		# lid 0 lmc 0 "sw1" lid 0 4xQDR s=4 w=2 v=4
+
+vendid=0x0
+devid=0x0
+sysimgguid=0x3048ffff95d808
+caguid=0x3048ffff95d808
+Ca	2 "H-003048ffff95d808"		# "gw101-1"
+[1](3048ffff95d809) 	"S-003048ffff95fd1a"[1]		# lid 0 lmc 0 "sw1" lid 0 4xQDR s=4 w=2 v=4
+
+vendid=0x0
+devid=0x0
+sysimgguid=0x3048ffff9493f1
+caguid=0x3048ffff9493f1
+Ca	2 "H-003048ffff9493f1"		# "st201-1"
+[1](3048ffff9493f2) 	"S-003048ffff5812fc"[2]		# lid 0 lmc 0 "sw2" lid 0 4xQDR s=4 w=2 v=4
+
+vendid=0x0
+devid=0x0
+sysimgguid=0x3048ffff9386f1
+caguid=0x3048ffff9386f1
+Ca	2 "H-003048ffff9386f1"		# "gw201-1"
+[1](3048ffff9386f2) 	"S-003048ffff5812fc"[1]		# lid 0 lmc 0 "sw2" lid 0 4xQDR s=4 w=2 v=4
