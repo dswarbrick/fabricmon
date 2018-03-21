@@ -41,14 +41,15 @@ func writeInfluxDB(nodes []Node, conf influxdbConf, caName string, portNum int) 
 				switch value.(type) {
 				case uint32:
 					tags["counter"] = stdCounterMap[counter]
-					fields["value"] = value
 				case uint64:
 					tags["counter"] = extCounterMap[counter]
+				}
 
-					// FIXME: InfluxDB < 1.6 does not support uint64
-					// (https://github.com/influxdata/influxdb/pull/8923)
-					// Workaround is to either convert to int64 (i.e., truncate to 63 bits),
-					fields["value"] = int64(value.(uint64))
+				// FIXME: InfluxDB < 1.6 does not support uint64
+				// (https://github.com/influxdata/influxdb/pull/8923)
+				// Workaround is to either convert to int64 (i.e., truncate to 63 bits),
+				if v, ok := value.(uint64); ok {
+					fields["value"] = int64(v)
 				}
 
 				if point, err := influxdb.NewPoint("fabricmon_counters", tags, fields, now); err == nil {

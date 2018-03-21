@@ -19,13 +19,14 @@ package main
 import "C"
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"sync"
 	"unsafe"
+
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 const PMA_TIMEOUT = 0
@@ -263,16 +264,19 @@ func umadGetCANames() []string {
 }
 
 func main() {
-	fabrics := make(FabricMap)
+	var (
+		configFile = kingpin.Flag("config", "Path to config file.").Default("fabricmon.conf").String()
+	)
 
-	confFile := flag.String("conf", "fabricmon.conf", "Path to config file")
-	flag.Parse()
+	kingpin.Parse()
 
-	conf, err := readConfig(*confFile)
+	conf, err := readConfig(*configFile)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	fabrics := make(FabricMap)
 
 	// Initialise umad library (also required in order to run under ibsim)
 	// FIXME: ibsim indicates that FabricMon is not "disconnecting" when it exits
