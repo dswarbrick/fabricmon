@@ -289,7 +289,7 @@ func smInfo(caName string, portNum int) {
 	ibd_ca := C.CString(caName)
 	defer C.free(unsafe.Pointer(ibd_ca))
 
-	ibd_ca_port := C.int(0)
+	ibd_ca_port := C.int(portNum)
 
 	srcport := C.mad_rpc_open_port(ibd_ca, ibd_ca_port, &mgmt_classes[0], 3)
 
