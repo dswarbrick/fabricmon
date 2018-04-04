@@ -344,7 +344,15 @@ func walkPorts(node *C.struct_ibnd_node) {
 		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))
 		arrayPtr += unsafe.Sizeof(arrayPtr)
 
-		log.Printf("Port num: %d, %#v\n", portNum, pp)
+		portState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_STATE_F)
+		physState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_PHYS_STATE_F)
+
+		// TODO: Decode EXT_PORT_LINK_SPEED (i.e., FDR10)
+		linkWidth := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_ACTIVE_F)
+		linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
+
+		log.Printf("Port %d, port state: %d, phys state: %d, link width: %d, link speed: %d\n",
+			portNum, portState, physState, linkWidth, linkSpeed)
 	}
 }
 
