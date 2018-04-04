@@ -325,7 +325,15 @@ func smInfo(caName string, portNum int) {
 }
 
 func walkFabric(fabric *C.struct_ibnd_fabric) {
-	log.Printf("fabric: %#v\n", fabric)
+	for node := fabric.nodes; node != nil; node = node.next {
+		myNode := Node{
+			guid:     uint64(node.guid),
+			nodeType: int(node._type),
+			nodeDesc: C.GoString(&node.nodedesc[0]),
+		}
+
+		log.Printf("node %#v\n", myNode)
+	}
 }
 
 func caDiscoverFabric(ca C.umad_ca_t) {
@@ -340,7 +348,6 @@ func caDiscoverFabric(ca C.umad_ca_t) {
 		portNum := int(umad_port.portnum)
 
 		log.Printf("Polling %s port %d", caName, portNum)
-		log.Printf("%#v\n", umad_port)
 
 		// ibnd_config_t specifies max hops, timeout, max SMPs etc
 		var config C.ibnd_config_t
@@ -376,7 +383,7 @@ func main() {
 	fabrics := make(FabricMap)
 
 	// Initialise umad library (also required in order to run under ibsim)
-	// FIXME: ibsim indicates that FabricMon is not "disconnecting" when it exits
+	// NOTE: ibsim indicates that FabricMon is not "disconnecting" when it exits - resource leak?
 	if C.umad_init() < 0 {
 		fmt.Println("Error initialising umad library. Exiting.")
 		os.Exit(1)
@@ -400,9 +407,11 @@ func main() {
 		C.umad_get_ca(ca_name, &ca)
 		C.free(unsafe.Pointer(ca_name))
 
-		log.Printf("Found CA %s (%s) with %d ports and firmware %s. Node GUID: %#016x, system GUID: %#016x\n",
+		log.Printf("Found CA %s (%s) with %d ports, firmware version: %s, hardware version: %s, "+
+			"node GUID: %#016x, system GUID: %#016x\n",
 			C.GoString(&ca.ca_name[0]), C.GoString(&ca.ca_type[0]), ca.numports,
-			C.GoString(&ca.fw_ver[0]), ntohll(uint64(ca.node_guid)), ntohll(uint64(ca.system_guid)))
+			C.GoString(&ca.fw_ver[0]), C.GoString(&ca.hw_ver[0]),
+			ntohll(uint64(ca.node_guid)), ntohll(uint64(ca.system_guid)))
 
 		umad_ca_list[i] = ca
 	}
@@ -445,6 +454,10 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	//
+	// Code below is deprecated
+	//
 
 	nnMap, _ := NewNodeNameMap()
 
