@@ -345,7 +345,8 @@ func caDiscoverFabric(ca C.umad_ca_t) {
 		// ibnd_config_t specifies max hops, timeout, max SMPs etc
 		var config C.ibnd_config_t
 
-		// FIXME: This is hitting mad_rpc_open_port() errors are a certain number of iterations
+		// NOTE: Under ibsim, this will fail after a certain number of iterations with a
+		// mad_rpc_open_port() errors (presumably due to a resource leak in ibsim).
 		fabric, err := C.ibnd_discover_fabric(&ca.ca_name[0], umad_port.portnum, nil, &config)
 
 		if err != nil {
@@ -423,7 +424,7 @@ func main() {
 		caDiscoverFabric(ca)
 	}
 
-	ticker := time.NewTicker(time.Second * 10)
+	ticker := time.NewTicker(time.Duration(conf.PollInterval))
 	defer ticker.Stop()
 
 	// Loop indefinitely, scanning fabrics every tick
