@@ -103,6 +103,8 @@ var extCounterMap = map[uint32]string{
 	C.IB_PC_EXT_RCV_MPKTS_F: "PortMulticastRcvPkts",
 }
 
+var nnMap NodeNameMap
+
 // getCounterUint32 decodes the specified counter from the supplied buffer and returns the uint32
 // counter value.
 func getCounterUint32(buf *C.uint8_t, counter uint32) (v uint32) {
@@ -187,10 +189,6 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) []Node {
 
 		if node._type == C.IB_NODE_SWITCH {
 			var portid C.ib_portid_t
-
-			fmt.Printf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x\n\n",
-				node._type, nnMap.remapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
-				node.numports, node.guid)
 
 			C.ib_portid_set(&portid, C.int(node.smalid), 0, 0)
 
@@ -324,6 +322,32 @@ func smInfo(caName string, portNum int) {
 		portid.lid, guid, act, prio, state, smStateMap[state])
 }
 
+func walkPorts(node *C.struct_ibnd_node) {
+	var portid C.ib_portid_t
+
+	log.Printf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x\n",
+		node._type, nnMap.remapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
+		node.numports, node.guid)
+
+	C.ib_portid_set(&portid, C.int(node.smalid), 0, 0)
+
+	// node.ports is an array of ports, indexed by port number:
+	//   ports[1] == port 1,
+	//   ports[2] == port 2,
+	//   etc...
+	// Any port in the array MAY BE NIL! Most notably, non-switches have no port zero, therefore
+	// ports[0] == nil for those nodes!
+	arrayPtr := uintptr(unsafe.Pointer(node.ports))
+
+	for portNum := 0; portNum <= int(node.numports); portNum++ {
+		// Get pointer to port struct and increment arrayPtr to next pointer
+		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))
+		arrayPtr += unsafe.Sizeof(arrayPtr)
+
+		log.Printf("Port num: %d, %#v\n", portNum, pp)
+	}
+}
+
 func walkFabric(fabric *C.struct_ibnd_fabric) {
 	for node := fabric.nodes; node != nil; node = node.next {
 		myNode := Node{
@@ -332,7 +356,11 @@ func walkFabric(fabric *C.struct_ibnd_fabric) {
 			nodeDesc: C.GoString(&node.nodedesc[0]),
 		}
 
-		log.Printf("node %#v\n", myNode)
+		log.Printf("node: %#v\n", myNode)
+
+		if node._type == C.IB_NODE_SWITCH {
+			walkPorts(node)
+		}
 	}
 }
 
@@ -396,6 +424,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	nnMap, _ = NewNodeNameMap()
+
 	// umad_ca_t contains an array of pointers - associated memory must be freed with
 	// umad_release_ca(umad_ca_t *ca)
 	umad_ca_list := make([]C.umad_ca_t, len(caNames))
@@ -458,8 +488,6 @@ func main() {
 	//
 	// Code below is deprecated
 	//
-
-	nnMap, _ := NewNodeNameMap()
 
 	for _, caName := range caNames {
 		var ca C.umad_ca_t
