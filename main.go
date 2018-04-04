@@ -324,8 +324,39 @@ func smInfo(caName string, portNum int) {
 		portid.lid, guid, act, prio, state, smStateMap[state])
 }
 
+func walkFabric(fabric *C.struct_ibnd_fabric) {
+	log.Printf("fabric: %#v\n", fabric)
+}
+
 func caDiscoverFabric(ca C.umad_ca_t) {
-	log.Printf("Polling ca: %#v\n", ca)
+	caName := C.GoString(&ca.ca_name[0])
+
+	for _, umad_port := range ca.ports {
+		// ca.ports may contain noncontiguous umad_port pointers
+		if umad_port == nil {
+			continue
+		}
+
+		portNum := int(umad_port.portnum)
+
+		log.Printf("Polling %s port %d", caName, portNum)
+		log.Printf("%#v\n", umad_port)
+
+		// ibnd_config_t specifies max hops, timeout, max SMPs etc
+		var config C.ibnd_config_t
+
+		// FIXME: This is hitting mad_rpc_open_port() errors are a certain number of iterations
+		fabric, err := C.ibnd_discover_fabric(&ca.ca_name[0], umad_port.portnum, nil, &config)
+
+		if err != nil {
+			log.Println("Unable to discover fabric:", err)
+			continue
+		}
+
+		walkFabric(fabric)
+
+		C.ibnd_destroy_fabric(fabric)
+	}
 }
 
 func main() {
@@ -363,6 +394,7 @@ func main() {
 
 	for i, caName := range caNames {
 		var ca C.umad_ca_t
+
 		ca_name := C.CString(caName)
 		C.umad_get_ca(ca_name, &ca)
 		C.free(unsafe.Pointer(ca_name))
@@ -404,6 +436,7 @@ func main() {
 		case <-shutdownChan:
 			log.Println("Shutdown received in polling loop.")
 
+			// Free associated memory from pointers in umad_ca_t.ports
 			for _, ca := range umad_ca_list {
 				C.umad_release_ca(&ca)
 			}
