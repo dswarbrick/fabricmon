@@ -20,8 +20,8 @@ type influxdbConf struct {
 }
 
 type fabricmonConf struct {
-	BindAddress  string
-	PollInterval Duration
+	BindAddress  string   `toml:"bind_address"`
+	PollInterval Duration `toml:"poll_interval"`
 	InfluxDB     influxdbConf
 }
 
@@ -57,7 +57,11 @@ func (d Duration) MarshalText() (text []byte, err error) {
 }
 
 func readConfig(configFile string) (fabricmonConf, error) {
-	var conf fabricmonConf
+	// Defaults
+	conf := fabricmonConf{
+		BindAddress:  ":8090",
+		PollInterval: Duration(time.Second * 10),
+	}
 
 	if _, err := toml.DecodeFile(configFile, &conf); err != nil {
 		return conf, fmt.Errorf("Cannot open / parse config file: %s", err)
