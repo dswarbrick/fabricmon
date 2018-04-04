@@ -22,9 +22,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -320,6 +324,10 @@ func smInfo(caName string, portNum int) {
 		portid.lid, guid, act, prio, state, smStateMap[state])
 }
 
+func caDiscoverFabric(ca C.umad_ca_t) {
+	log.Printf("Polling ca: %#v\n", ca)
+}
+
 func main() {
 	var (
 		configFile = kingpin.Flag("config", "Path to config file.").Default("fabricmon.conf").String()
@@ -338,11 +346,72 @@ func main() {
 	// Initialise umad library (also required in order to run under ibsim)
 	// FIXME: ibsim indicates that FabricMon is not "disconnecting" when it exits
 	if C.umad_init() < 0 {
-		fmt.Println("Error initialising umad library")
+		fmt.Println("Error initialising umad library. Exiting.")
 		os.Exit(1)
 	}
 
 	caNames := umadGetCANames()
+
+	if len(caNames) == 0 {
+		fmt.Println("No HCAs found in system. Exiting.")
+		os.Exit(1)
+	}
+
+	// umad_ca_t contains an array of pointers - associated memory must be freed with
+	// umad_release_ca(umad_ca_t *ca)
+	umad_ca_list := make([]C.umad_ca_t, len(caNames))
+
+	for i, caName := range caNames {
+		var ca C.umad_ca_t
+		ca_name := C.CString(caName)
+		C.umad_get_ca(ca_name, &ca)
+		C.free(unsafe.Pointer(ca_name))
+
+		log.Printf("Found CA %s (%s) with %d ports and firmware %s. Node GUID: %#016x, system GUID: %#016x\n",
+			C.GoString(&ca.ca_name[0]), C.GoString(&ca.ca_type[0]), ca.numports,
+			C.GoString(&ca.fw_ver[0]), ntohll(uint64(ca.node_guid)), ntohll(uint64(ca.system_guid)))
+
+		umad_ca_list[i] = ca
+	}
+
+	// Channel to signal goroutines that we are shutting down
+	shutdownChan := make(chan bool)
+
+	// Setup signal handler to catch SIGINT, SIGTERM
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, unix.SIGINT, unix.SIGTERM)
+	go func() {
+		s := <-sigChan
+		log.Printf("Caught signal: %s. Shutting down.", s)
+		close(shutdownChan)
+	}()
+
+	// First sweep
+	for _, ca := range umad_ca_list {
+		caDiscoverFabric(ca)
+	}
+
+	ticker := time.NewTicker(time.Second * 10)
+	defer ticker.Stop()
+
+	// Loop indefinitely, scanning fabrics every tick
+	for {
+		select {
+		case <-ticker.C:
+			for _, ca := range umad_ca_list {
+				caDiscoverFabric(ca)
+			}
+		case <-shutdownChan:
+			log.Println("Shutdown received in polling loop.")
+
+			for _, ca := range umad_ca_list {
+				C.umad_release_ca(&ca)
+			}
+
+			os.Exit(1)
+		}
+	}
+
 	nnMap, _ := NewNodeNameMap()
 
 	for _, caName := range caNames {
@@ -360,15 +429,9 @@ func main() {
 				err    error
 			)
 
-			fmt.Printf("Found CA %s (%s) with %d ports and firmware %s\n",
-				C.GoString(&ca.ca_name[0]), C.GoString(&ca.ca_type[0]), ca.numports, C.GoString(&ca.fw_ver[0]))
-			fmt.Printf("Node GUID: %#016x, system GUID: %#016x\n\n",
-				ntohll(uint64(ca.node_guid)), ntohll(uint64(ca.system_guid)))
-
 			fmt.Printf("%s: %#v\n\n", caName, ca)
 
 			// Iterate over HCA's ports and perform fabric discovery from each
-			// TODO: Check whether real IB environments return null entries in ca.ports
 			for _, v := range ca.ports {
 				if v == nil {
 					continue
