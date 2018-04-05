@@ -31,6 +31,8 @@ import (
 	"golang.org/x/sys/unix"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/dswarbrick/fabricmon/version"
 )
 
 const (
@@ -431,6 +433,8 @@ func main() {
 		fmt.Println("No HCAs found in system. Exiting.")
 		os.Exit(1)
 	}
+
+	log.Println("FabricMon", version.Info())
 
 	nnMap, _ = NewNodeNameMap()
 
