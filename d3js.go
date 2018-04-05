@@ -8,6 +8,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 )
 
@@ -27,6 +28,8 @@ type d3Topology struct {
 	Links []d3Link `json:"links"`
 }
 
+// makeD3 transforms the internal representation of InfiniBand nodes into d3.js nodes and links,
+// and returns marshalled JSON.
 func makeD3(nodes []Node) []byte {
 	nnMap, _ := NewNodeNameMap()
 
@@ -58,4 +61,12 @@ func makeD3(nodes []Node) []byte {
 	}
 
 	return jsonBuf
+}
+
+func writeD3JSON(filename string, nodes []Node) {
+	buf := makeD3(nodes)
+
+	if err := ioutil.WriteFile(filename, buf, 0644); err != nil {
+		log.Println("ERROR: Cannot write d3.js JSON topology:", err)
+	}
 }

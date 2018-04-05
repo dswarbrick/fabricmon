@@ -23,6 +23,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -356,7 +357,7 @@ func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []N
 	return nodes
 }
 
-func caDiscoverFabric(ca C.umad_ca_t) {
+func caDiscoverFabric(ca C.umad_ca_t, outputDir string) {
 	caName := C.GoString(&ca.ca_name[0])
 
 	mgmt_classes := [3]C.int{C.IB_SMI_CLASS, C.IB_SA_CLASS, C.IB_PERFORMANCE_CLASS}
@@ -392,7 +393,12 @@ func caDiscoverFabric(ca C.umad_ca_t) {
 			nodes := walkFabric(fabric, mad_port)
 			C.mad_rpc_close_port(mad_port)
 
-			makeD3(nodes)
+			if outputDir != "" {
+				hostname, _ := os.Hostname()
+				filename := fmt.Sprintf("%s-%s-p%d.json", hostname, caName, portNum)
+
+				writeD3JSON(path.Join(outputDir, filename), nodes)
+			}
 		} else {
 			log.Printf("ERROR: Unable to open MAD port: %s: %d", caName, portNum)
 		}
@@ -466,7 +472,7 @@ func main() {
 
 	// First sweep.
 	for _, ca := range umad_ca_list {
-		caDiscoverFabric(ca)
+		caDiscoverFabric(ca, ".")
 	}
 
 	ticker := time.NewTicker(time.Duration(conf.PollInterval))
@@ -477,7 +483,7 @@ func main() {
 		select {
 		case <-ticker.C:
 			for _, ca := range umad_ca_list {
-				caDiscoverFabric(ca)
+				caDiscoverFabric(ca, "")
 			}
 		case <-shutdownChan:
 			log.Println("Shutdown received in polling loop.")
