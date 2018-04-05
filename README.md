@@ -76,6 +76,48 @@ fabric:
 $ LD_PRELOAD=/usr/lib/umad2sim/libumad2sim.so go run *.go
 ```
 
+## InfluxDB Data Model
+
+Counters are written to InfluxDB in a simple key -> value style. Tags include the following:
+
+ * host - host from whence the counters were scraped (i.e., FabricMon host)
+ * hca - InfiniBand HCA connected to the fabric
+ * src_port - HCA port from which the fabric discovery was performed
+ * guid - InfiniBand switch GUID
+ * port - InfiniBand switch port number
+ * counter - InfiniBand counter name
+
+The value is an integer field. Note that InfluxDB < 1.6 does not support uint64 values, whereas
+several of the InfiniBand counters utilize the full 64 bits. Counter values will be truncated to
+63 bits, so that they will fit in a signed int64 field.
+
+### Example InfluxDB Measurement
+
+```
+time                counter                     guid             hca    host    port src_port value
+----                -------                     ----             ---    ----    ---- -------- -----
+1521657387000000000 VL15Dropped                 003048ffff5812fc ibsim0 hal9000 1    0        2160
+1521657387000000000 SymbolErrorCounter          003048ffff5812fc ibsim0 hal9000 1    0        0
+1521657387000000000 PortXmitPkts                003048ffff5812fc ibsim0 hal9000 1    0        30
+1521657387000000000 PortXmitDiscards            003048ffff5812fc ibsim0 hal9000 1    0        30
+1521657387000000000 PortXmitData                003048ffff5812fc ibsim0 hal9000 1    0        2160
+1521657387000000000 PortXmitConstraintErrors    003048ffff5812fc ibsim0 hal9000 1    0        30
+1521657387000000000 PortUnicastXmitPkts         003048ffff5812fc ibsim0 hal9000 1    0        0
+1521657387000000000 PortUnicastRcvPkts          003048ffff5812fc ibsim0 hal9000 1    0        0
+1521657387000000000 PortRcvSwitchRelayErrors    003048ffff5812fc ibsim0 hal9000 1    0        30
+1521657387000000000 PortRcvRemotePhysicalErrors 003048ffff5812fc ibsim0 hal9000 1    0        2160
+1521657387000000000 VL15Dropped                 003048ffff5812fc ibsim0 hal9000 2    0        0
+1521657387000000000 SymbolErrorCounter          003048ffff5812fc ibsim0 hal9000 2    0        0
+1521657387000000000 PortXmitPkts                003048ffff5812fc ibsim0 hal9000 2    0        30
+1521657387000000000 PortXmitDiscards            003048ffff5812fc ibsim0 hal9000 2    0        0
+1521657387000000000 PortXmitData                003048ffff5812fc ibsim0 hal9000 2    0        2160
+1521657387000000000 PortXmitConstraintErrors    003048ffff5812fc ibsim0 hal9000 2    0        2160
+1521657387000000000 PortUnicastXmitPkts         003048ffff5812fc ibsim0 hal9000 2    0        0
+1521657387000000000 PortUnicastRcvPkts          003048ffff5812fc ibsim0 hal9000 2    0        0
+1521657387000000000 PortRcvSwitchRelayErrors    003048ffff5812fc ibsim0 hal9000 2    0        0
+1521657387000000000 PortRcvRemotePhysicalErrors 003048ffff5812fc ibsim0 hal9000 2    0        0
+```
+
 ## Future Plans
 
 * Subscribe to SM traps 128 (link state change) and 144 (port capabilities

@@ -59,7 +59,7 @@ func writeInfluxDB(nodes []Node, conf influxdbConf, caName string, portNum int) 
 		}
 	}
 
-	fmt.Printf("InfluxDB batch contains %d points\n", len(batch.Points()))
+	log.Printf("InfluxDB batch contains %d points\n", len(batch.Points()))
 	writeBatch(conf, batch)
 }
 
