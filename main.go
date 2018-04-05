@@ -137,9 +137,9 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	capMask := nativeEndian.Uint16(buf[2:4])
 	log.Printf("Cap Mask: %#02x\n", ntohs(capMask))
 
-	// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and
-	// PortRcvDataSL, components that represent Data (e.g. PortXmitData and
-	// PortRcvData) indicate octets divided by 4 rather than just octets.
+	// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and PortRcvDataSL, components
+	// that represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather
+	// than just octets.
 
 	// Fetch standard (32 bit, some 16 bit) counters
 	pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, ibmadPort)
@@ -156,9 +156,9 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	}
 
 	if (capMask&C.IB_PM_EXT_WIDTH_SUPPORTED == 0) && (capMask&C.IB_PM_EXT_WIDTH_NOIETF_SUP == 0) {
-		// TODO: Fetch standard data / packet counters if extended counters are not
-		// supported (unlikely)
-		log.Println("Port does not support extended counters")
+		// TODO: Fetch standard data / packet counters if extended counters are not supported
+		// (unlikely).
+		log.Println("NOTICE: Port does not support extended counters")
 		return counters, nil
 	}
 
@@ -217,18 +217,9 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) []Node {
 				fmt.Printf("Port %d, port state: %d, phys state: %d, link width: %d, link speed: %d\n",
 					portNum, portState, physState, linkWidth, linkSpeed)
 
-				// TODO: Rework portState checking to optionally decode counters regardless of portState
 				if portState != C.IB_LINK_DOWN {
-					fmt.Printf("port %#v\n", pp)
-
-					// This should not be nil if the link is up, but check anyway
-					// FIXME: portState may be polling / armed etc, and rp will be null!
 					rp := pp.remoteport
 					if rp != nil {
-						fmt.Printf("Remote node type: %d, GUID: %#016x, descr: %s\n",
-							rp.node._type, rp.node.guid,
-							nnMap.remapNodeName(uint64(node.guid), C.GoString(&rp.node.nodedesc[0])))
-
 						myPort.remoteGuid = uint64(rp.node.guid)
 					}
 
@@ -310,7 +301,7 @@ func smInfo(caName string, portNum int) {
 		portid.lid, guid, act, prio, state, smStateMap[state])
 }
 
-func walkPorts(node *C.struct_ibnd_node) {
+func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) {
 	var portid C.ib_portid_t
 
 	log.Printf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x\n",
@@ -368,12 +359,14 @@ func walkPorts(node *C.struct_ibnd_node) {
 					log.Printf("NOTICE: Port %d link speed is not the max speed supported by both ports",
 						portNum)
 				}
+
+				getPortCounters(&portid, portNum, mad_port)
 			}
 		}
 	}
 }
 
-func walkFabric(fabric *C.struct_ibnd_fabric) {
+func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) {
 	for node := fabric.nodes; node != nil; node = node.next {
 		myNode := Node{
 			guid:     uint64(node.guid),
@@ -384,7 +377,7 @@ func walkFabric(fabric *C.struct_ibnd_fabric) {
 		log.Printf("node: %#v\n", myNode)
 
 		if node._type == C.IB_NODE_SWITCH {
-			walkPorts(node)
+			walkPorts(node, mad_port)
 		}
 	}
 }
@@ -392,6 +385,9 @@ func walkFabric(fabric *C.struct_ibnd_fabric) {
 func caDiscoverFabric(ca C.umad_ca_t) {
 	caName := C.GoString(&ca.ca_name[0])
 
+	mgmt_classes := [3]C.int{C.IB_SMI_CLASS, C.IB_SA_CLASS, C.IB_PERFORMANCE_CLASS}
+
+	// Iterate over CA's umad_port array
 	for _, umad_port := range ca.ports {
 		// ca.ports may contain noncontiguous umad_port pointers
 		if umad_port == nil {
@@ -399,7 +395,6 @@ func caDiscoverFabric(ca C.umad_ca_t) {
 		}
 
 		portNum := int(umad_port.portnum)
-
 		log.Printf("Polling %s port %d", caName, portNum)
 
 		// ibnd_config_t specifies max hops, timeout, max SMPs etc
@@ -414,7 +409,16 @@ func caDiscoverFabric(ca C.umad_ca_t) {
 			continue
 		}
 
-		walkFabric(fabric)
+		// Open MAD port, which is needed for getting port counters.
+		// struct ibmad_port *mad_rpc_open_port(char *dev_name, int dev_port, int *mgmt_classes, int num_classes)
+		mad_port := C.mad_rpc_open_port(&ca.ca_name[0], umad_port.portnum, &mgmt_classes[0], C.int(len(mgmt_classes)))
+
+		if mad_port != nil {
+			walkFabric(fabric, mad_port)
+			C.mad_rpc_close_port(mad_port)
+		} else {
+			log.Printf("ERROR: Unable to open MAD port: %s: %d", caName, portNum)
+		}
 
 		C.ibnd_destroy_fabric(fabric)
 	}
