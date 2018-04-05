@@ -135,7 +135,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	}
 
 	capMask := nativeEndian.Uint16(buf[2:4])
-	log.Printf("Cap Mask: %#02x\n", ntohs(capMask))
+	log.Printf("Port %d Cap Mask: %#02x\n", portNum, ntohs(capMask))
 
 	// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and PortRcvDataSL, components
 	// that represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather
@@ -360,7 +360,11 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) {
 						portNum)
 				}
 
-				getPortCounters(&portid, portNum, mad_port)
+				if counters, err := getPortCounters(&portid, portNum, mad_port); err == nil {
+					fmt.Printf("%#v\n", counters)
+				} else {
+					log.Printf("ERROR: Cannot get counters for port %d: %s\n", portNum, err)
+				}
 			}
 		}
 	}
