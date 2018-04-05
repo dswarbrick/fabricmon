@@ -410,6 +410,8 @@ func caDiscoverFabric(ca C.umad_ca_t, outputDir string) {
 func main() {
 	var (
 		configFile = kingpin.Flag("config", "Path to config file.").Default("fabricmon.conf").String()
+		jsonDir    = kingpin.Flag("json-dir", "Output directory for JSON topologies.").Default("./").String()
+		daemonize  = kingpin.Flag("daemonize", "Run forever, fetching counters periodically.").Default("true").Bool()
 	)
 
 	kingpin.Parse()
@@ -472,35 +474,39 @@ func main() {
 
 	// First sweep.
 	for _, ca := range umad_ca_list {
-		caDiscoverFabric(ca, ".")
+		caDiscoverFabric(ca, *jsonDir)
 	}
 
-	ticker := time.NewTicker(time.Duration(conf.PollInterval))
-	defer ticker.Stop()
+	if *daemonize {
+		ticker := time.NewTicker(time.Duration(conf.PollInterval))
+		defer ticker.Stop()
 
-	// Loop indefinitely, scanning fabrics every tick.
-	for {
-		select {
-		case <-ticker.C:
-			for _, ca := range umad_ca_list {
-				caDiscoverFabric(ca, "")
+	Loop:
+		// Loop indefinitely, scanning fabrics every tick.
+		for {
+			select {
+			case <-ticker.C:
+				for _, ca := range umad_ca_list {
+					caDiscoverFabric(ca, *jsonDir)
+				}
+			case <-shutdownChan:
+				log.Println("Shutdown received in polling loop.")
+				break Loop
 			}
-		case <-shutdownChan:
-			log.Println("Shutdown received in polling loop.")
-
-			// Free associated memory from pointers in umad_ca_t.ports
-			for _, ca := range umad_ca_list {
-				C.umad_release_ca(&ca)
-			}
-
-			C.umad_done()
-			os.Exit(1)
 		}
 	}
 
+	log.Println("Cleaning up")
+
+	// Free associated memory from pointers in umad_ca_t.ports
+	for _, ca := range umad_ca_list {
+		C.umad_release_ca(&ca)
+	}
+
+	C.umad_done()
+
 	// TODO: Re-enable these
 	// writeInfluxDB(nodes, conf.InfluxDB, caName, portNum)
-	// makeD3(nodes)
 
 	// Start HTTP server to serve JSON for d3.js (WIP)
 	// serve(conf.BindAddress, fabrics)
