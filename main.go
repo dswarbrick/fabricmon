@@ -105,6 +105,25 @@ var extCounterMap = map[uint32]string{
 	C.IB_PC_EXT_RCV_MPKTS_F: "PortMulticastRcvPkts",
 }
 
+var portStates = [...]string{
+	"No state change", // Valid only on Set() port state
+	"Down",            // Includes failed links
+	"Initialize",
+	"Armed",
+	"Active",
+}
+
+var portPhysStates = [...]string{
+	"No state change", // Valid only on Set() port state
+	"Sleep",
+	"Polling",
+	"Disabled",
+	"PortConfigurationTraining",
+	"LinkUp",
+	"LinkErrorRecovery",
+	"Phy Test",
+}
+
 var nnMap NodeNameMap
 
 // getCounterUint32 decodes the specified counter from the supplied buffer and returns the uint32
@@ -131,7 +150,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	pmaBuf := C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.CLASS_PORT_INFO, ibmadPort)
 
 	if pmaBuf == nil {
-		return counters, fmt.Errorf("ERROR: CLASS_PORT_INFO query failed!")
+		return counters, fmt.Errorf("ERROR: Port %d CLASS_PORT_INFO query failed!", portNum)
 	}
 
 	capMask := nativeEndian.Uint16(buf[2:4])
@@ -158,7 +177,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	if (capMask&C.IB_PM_EXT_WIDTH_SUPPORTED == 0) && (capMask&C.IB_PM_EXT_WIDTH_NOIETF_SUP == 0) {
 		// TODO: Fetch standard data / packet counters if extended counters are not supported
 		// (unlikely).
-		log.Println("NOTICE: Port does not support extended counters")
+		log.Printf("NOTICE: Port %d does not support extended counters", portNum)
 		return counters, nil
 	}
 
@@ -341,7 +360,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) {
 				rp.node._type, rp.node.guid,
 				nnMap.remapNodeName(uint64(rp.node.guid), C.GoString(&rp.node.nodedesc[0])))
 
-			if portState != C.IB_LINK_DOWN {
+			if (portState == C.IB_LINK_ACTIVE) && (physState == C.IB_PORT_PHYS_STATE_LINKUP) {
 				// Determine max width supported by both ends
 				maxWidth := uint(1 << log2b(uint(
 					C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)&
