@@ -64,18 +64,24 @@ func writeInfluxDB(nodes []Node, conf influxdbConf, caName string, portNum int) 
 }
 
 func writeBatch(conf influxdbConf, batch influxdb.BatchPoints) {
-	c, err := influxdb.NewHTTPClient(influxdb.HTTPConfig{
+	client, err := influxdb.NewHTTPClient(influxdb.HTTPConfig{
 		Addr:     conf.Url,
 		Username: conf.Username,
 		Password: conf.Password,
 	})
+
 	if err != nil {
 		log.Print(err)
+		return
 	}
 
-	if err := c.Write(batch); err != nil {
+	if rtt, version, err := client.Ping(0); err == nil {
+		log.Printf("InfluxDB (version %s) ping response: %v\n", version, rtt)
+	}
+
+	if err := client.Write(batch); err != nil {
 		log.Print(err)
 	}
 
-	c.Close()
+	client.Close()
 }

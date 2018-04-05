@@ -193,73 +193,6 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	return counters, nil
 }
 
-// iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only switch
-// nodes (DEPRECATED).
-func iterateSwitches(f *Fabric, nnMap *NodeNameMap) []Node {
-	nodes := make([]Node, 0)
-
-	f.mutex.Lock()
-	defer f.mutex.Unlock()
-
-	for node := f.ibndFabric.nodes; node != nil; node = node.next {
-		myNode := Node{
-			guid:     uint64(node.guid),
-			nodeType: int(node._type),
-			nodeDesc: C.GoString(&node.nodedesc[0]),
-		}
-
-		if node._type == C.IB_NODE_SWITCH {
-			var portid C.ib_portid_t
-
-			C.ib_portid_set(&portid, C.int(node.smalid), 0, 0)
-
-			// node.ports is an array of pointers, in which any port may be null. We use pointer
-			// arithmetic to get pointer to port struct.
-			arrayPtr := uintptr(unsafe.Pointer(node.ports))
-
-			myNode.ports = make([]Port, node.numports+1)
-
-			for portNum := 0; portNum <= int(node.numports); portNum++ {
-				// Get pointer to port struct and increment arrayPtr to next pointer
-				pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))
-				arrayPtr += unsafe.Sizeof(arrayPtr)
-
-				myPort := Port{guid: uint64(pp.guid)}
-
-				portState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_STATE_F)
-				physState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_PHYS_STATE_F)
-
-				// TODO: Decode EXT_PORT_LINK_SPEED (i.e., FDR10)
-				linkWidth := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_ACTIVE_F)
-				linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
-
-				fmt.Printf("Port %d, port state: %d, phys state: %d, link width: %d, link speed: %d\n",
-					portNum, portState, physState, linkWidth, linkSpeed)
-
-				if portState != C.IB_LINK_DOWN {
-					rp := pp.remoteport
-					if rp != nil {
-						myPort.remoteGuid = uint64(rp.node.guid)
-					}
-
-					// Get counters for a single port
-					if counters, err := getPortCounters(&portid, portNum, f.ibmadPort); err == nil {
-						myPort.counters = counters
-					}
-				}
-
-				myNode.ports[portNum] = myPort
-			}
-
-			fmt.Printf("%#v\n", myNode)
-		}
-
-		nodes = append(nodes, myNode)
-	}
-
-	return nodes
-}
-
 func umadGetCANames() []string {
 	var (
 		buf  [C.UMAD_CA_NAME_LEN][C.UMAD_MAX_DEVICES]byte
@@ -321,12 +254,14 @@ func smInfo(caName string, portNum int) {
 		portid.lid, guid, act, prio, state, smStateMap[state])
 }
 
-func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) {
+func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 	var portid C.ib_portid_t
 
 	log.Printf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x\n",
 		node._type, nnMap.remapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
 		node.numports, node.guid)
+
+	ports := make([]Port, node.numports+1)
 
 	C.ib_portid_set(&portid, C.int(node.smalid), 0, 0)
 
@@ -342,6 +277,8 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) {
 		// Get pointer to port struct and increment arrayPtr to next pointer.
 		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))
 		arrayPtr += unsafe.Sizeof(arrayPtr)
+
+		myPort := Port{guid: uint64(pp.guid)}
 
 		portState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_STATE_F)
 		physState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_PHYS_STATE_F)
@@ -361,6 +298,9 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) {
 				rp.node._type, rp.node.guid,
 				nnMap.remapNodeName(uint64(rp.node.guid), C.GoString(&rp.node.nodedesc[0])))
 
+			myPort.remoteGuid = uint64(rp.node.guid)
+
+			// Port counters will only be fetched if port is ACTIVE + LINKUP
 			if (portState == C.IB_LINK_ACTIVE) && (physState == C.IB_PORT_PHYS_STATE_LINKUP) {
 				// Determine max width supported by both ends
 				maxWidth := uint(1 << log2b(uint(
@@ -381,16 +321,22 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) {
 				}
 
 				if counters, err := getPortCounters(&portid, portNum, mad_port); err == nil {
-					fmt.Printf("%#v\n", counters)
+					myPort.counters = counters
 				} else {
 					log.Printf("ERROR: Cannot get counters for port %d: %s\n", portNum, err)
 				}
 			}
 		}
+
+		ports[portNum] = myPort
 	}
+
+	return ports
 }
 
-func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) {
+func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []Node {
+	nodes := make([]Node, 0)
+
 	for node := fabric.nodes; node != nil; node = node.next {
 		myNode := Node{
 			guid:     uint64(node.guid),
@@ -401,9 +347,13 @@ func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) {
 		log.Printf("node: %#v\n", myNode)
 
 		if node._type == C.IB_NODE_SWITCH {
-			walkPorts(node, mad_port)
+			myNode.ports = walkPorts(node, mad_port)
 		}
+
+		nodes = append(nodes, myNode)
 	}
+
+	return nodes
 }
 
 func caDiscoverFabric(ca C.umad_ca_t) {
@@ -439,8 +389,10 @@ func caDiscoverFabric(ca C.umad_ca_t) {
 		mad_port := C.mad_rpc_open_port(&ca.ca_name[0], umad_port.portnum, &mgmt_classes[0], C.int(len(mgmt_classes)))
 
 		if mad_port != nil {
-			walkFabric(fabric, mad_port)
+			nodes := walkFabric(fabric, mad_port)
 			C.mad_rpc_close_port(mad_port)
+
+			makeD3(nodes)
 		} else {
 			log.Printf("ERROR: Unable to open MAD port: %s: %d", caName, portNum)
 		}
@@ -546,8 +498,4 @@ func main() {
 
 	// Start HTTP server to serve JSON for d3.js (WIP)
 	// serve(conf.BindAddress, fabrics)
-
-	//
-	// Code below is deprecated
-	//
 }
