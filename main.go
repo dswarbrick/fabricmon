@@ -544,7 +544,7 @@ func main() {
 
 				if port == nil {
 					// TODO: Delay ibnd_discover_fabric until we have successfully opened the port
-					fmt.Println("Unable to open MAD port: %s: %d", caName, v.portnum)
+					fmt.Printf("Unable to open MAD port: %s: %d", caName, v.portnum)
 					C.ibnd_destroy_fabric(fabrics[caName][portNum].ibndFabric)
 					continue
 				}
