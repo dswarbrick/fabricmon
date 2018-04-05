@@ -175,7 +175,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 }
 
 // iterateSwitches walks the null-terminated node linked-list in f.nodes, displaying only switch
-// nodes.
+// nodes (DEPRECATED).
 func iterateSwitches(f *Fabric, nnMap *NodeNameMap) []Node {
 	nodes := make([]Node, 0)
 
@@ -230,20 +230,6 @@ func iterateSwitches(f *Fabric, nnMap *NodeNameMap) []Node {
 							nnMap.remapNodeName(uint64(node.guid), C.GoString(&rp.node.nodedesc[0])))
 
 						myPort.remoteGuid = uint64(rp.node.guid)
-
-						// Determine max width supported by both ends
-						maxWidth := uint(1 << log2b(uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)&
-							C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F))))
-						if uint(linkWidth) != maxWidth {
-							fmt.Println("NOTICE: Link width is not the max width supported by both ports")
-						}
-
-						// Determine max speed supported by both ends
-						maxSpeed := uint(1 << log2b(uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)&
-							C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F))))
-						if uint(linkSpeed) != maxSpeed {
-							fmt.Println("NOTICE: Link speed is not the max speed supported by both ports")
-						}
 					}
 
 					// Get counters for a single port
@@ -280,7 +266,7 @@ func umadGetCANames() []string {
 	return hcas
 }
 
-// smInfo is a proof of concept function to get the SM info for a CA & port
+// smInfo is a proof of concept function to get the SM info for a CA & port.
 func smInfo(caName string, portNum int) {
 	var (
 		sminfo [1024]C.uint8_t
@@ -342,19 +328,48 @@ func walkPorts(node *C.struct_ibnd_node) {
 	arrayPtr := uintptr(unsafe.Pointer(node.ports))
 
 	for portNum := 0; portNum <= int(node.numports); portNum++ {
-		// Get pointer to port struct and increment arrayPtr to next pointer
+		// Get pointer to port struct and increment arrayPtr to next pointer.
 		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))
 		arrayPtr += unsafe.Sizeof(arrayPtr)
 
 		portState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_STATE_F)
 		physState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_PHYS_STATE_F)
 
-		// TODO: Decode EXT_PORT_LINK_SPEED (i.e., FDR10)
+		// TODO: Decode EXT_PORT_LINK_SPEED (i.e., FDR10).
 		linkWidth := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_ACTIVE_F)
 		linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
 
 		log.Printf("Port %d, port state: %d, phys state: %d, link width: %d, link speed: %d\n",
 			portNum, portState, physState, linkWidth, linkSpeed)
+
+		// Remote port may be nil if port state is polling / armed.
+		rp := pp.remoteport
+
+		if rp != nil {
+			log.Printf("Remote node type: %d, GUID: %#016x, descr: %s\n",
+				rp.node._type, rp.node.guid,
+				nnMap.remapNodeName(uint64(rp.node.guid), C.GoString(&rp.node.nodedesc[0])))
+
+			if portState != C.IB_LINK_DOWN {
+				// Determine max width supported by both ends
+				maxWidth := uint(1 << log2b(uint(
+					C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)&
+						C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F))))
+				if uint(linkWidth) != maxWidth {
+					log.Printf("NOTICE: Port %d link width is not the max width supported by both ports",
+						portNum)
+				}
+
+				// Determine max speed supported by both ends
+				maxSpeed := uint(1 << log2b(uint(
+					C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)&
+						C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F))))
+				if uint(linkSpeed) != maxSpeed {
+					log.Printf("NOTICE: Port %d link speed is not the max speed supported by both ports",
+						portNum)
+				}
+			}
+		}
 	}
 }
 
@@ -458,10 +473,10 @@ func main() {
 		umad_ca_list[i] = ca
 	}
 
-	// Channel to signal goroutines that we are shutting down
+	// Channel to signal goroutines that we are shutting down.
 	shutdownChan := make(chan bool)
 
-	// Setup signal handler to catch SIGINT, SIGTERM
+	// Setup signal handler to catch SIGINT, SIGTERM.
 	sigChan := make(chan os.Signal)
 	signal.Notify(sigChan, unix.SIGINT, unix.SIGTERM)
 	go func() {
@@ -470,7 +485,7 @@ func main() {
 		close(shutdownChan)
 	}()
 
-	// First sweep
+	// First sweep.
 	for _, ca := range umad_ca_list {
 		caDiscoverFabric(ca)
 	}
@@ -478,7 +493,7 @@ func main() {
 	ticker := time.NewTicker(time.Duration(conf.PollInterval))
 	defer ticker.Stop()
 
-	// Loop indefinitely, scanning fabrics every tick
+	// Loop indefinitely, scanning fabrics every tick.
 	for {
 		select {
 		case <-ticker.C:
