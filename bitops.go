@@ -29,9 +29,17 @@ func log2b(x uint) uint {
 	return uint(bits.Len(x) - 1)
 }
 
+// htons converts a uint16 from host byte order to network byte order
+func htons(x uint16) uint16 {
+	if nativeEndian != binary.BigEndian {
+		return bits.ReverseBytes16(x)
+	}
+	return x
+}
+
 // ntohs converts a uint16 from network byte order to host byte order
 func ntohs(x uint16) uint16 {
-	if nativeEndian == binary.LittleEndian {
+	if nativeEndian != binary.BigEndian {
 		return bits.ReverseBytes16(x)
 	}
 	return x
@@ -39,7 +47,7 @@ func ntohs(x uint16) uint16 {
 
 // ntohll converts a uint32 from network byte order to host byte order
 func ntohl(x uint32) uint32 {
-	if nativeEndian == binary.LittleEndian {
+	if nativeEndian != binary.BigEndian {
 		return bits.ReverseBytes32(x)
 	}
 	return x
@@ -47,7 +55,7 @@ func ntohl(x uint32) uint32 {
 
 // ntohll converts a uint64 from network byte order to host byte order
 func ntohll(x uint64) uint64 {
-	if nativeEndian == binary.LittleEndian {
+	if nativeEndian != binary.BigEndian {
 		return bits.ReverseBytes64(x)
 	}
 	return x

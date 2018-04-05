@@ -66,6 +66,8 @@ type Node struct {
 	guid     uint64
 	nodeType int
 	nodeDesc string
+	vendorID uint16
+	deviceID uint16
 	ports    []Port
 }
 
@@ -154,8 +156,8 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 		return counters, fmt.Errorf("ERROR: Port %d CLASS_PORT_INFO query failed!", portNum)
 	}
 
-	capMask := nativeEndian.Uint16(buf[2:4])
-	log.Printf("Port %d Cap Mask: %#02x\n", portNum, ntohs(capMask))
+	capMask := htons(uint16(C.mad_get_field(unsafe.Pointer(&buf), 0, C.IB_CPI_CAPMASK_F)))
+	log.Printf("Port %d Cap Mask2: %#x\n", portNum, ntohs(capMask))
 
 	// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and PortRcvDataSL, components
 	// that represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather
@@ -343,6 +345,8 @@ func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []N
 			guid:     uint64(node.guid),
 			nodeType: int(node._type),
 			nodeDesc: C.GoString(&node.nodedesc[0]),
+			vendorID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_VENDORID_F)),
+			deviceID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_DEVID_F)),
 		}
 
 		log.Printf("node: %#v\n", myNode)
