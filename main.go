@@ -291,6 +291,7 @@ func smInfo(caName string, portNum int) {
 
 	ibd_ca_port := C.int(portNum)
 
+	// struct ibmad_port *mad_rpc_open_port(char *dev_name, int dev_port, int *mgmt_classes, int num_classes)
 	srcport := C.mad_rpc_open_port(ibd_ca, ibd_ca_port, &mgmt_classes[0], 3)
 
 	prio := SMINFO_STANDBY
@@ -425,6 +426,7 @@ func caDiscoverFabric(ca C.umad_ca_t) {
 
 		// NOTE: Under ibsim, this will fail after a certain number of iterations with a
 		// mad_rpc_open_port() errors (presumably due to a resource leak in ibsim).
+		// ibnd_fabric_t *ibnd_discover_fabric(char *ca_name, int ca_port, ib_portid_t *from, ibnd_config_t *config)
 		fabric, err := C.ibnd_discover_fabric(&ca.ca_name[0], umad_port.portnum, nil, &config)
 
 		if err != nil {
@@ -459,8 +461,6 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	fabrics := make(FabricMap)
 
 	// Initialise umad library (also required in order to run under ibsim)
 	// NOTE: ibsim indicates that FabricMon is not "disconnecting" when it exits - resource leak?
@@ -535,94 +535,19 @@ func main() {
 				C.umad_release_ca(&ca)
 			}
 
+			C.umad_done()
 			os.Exit(1)
 		}
 	}
 
+	// TODO: Re-enable these
+	// writeInfluxDB(nodes, conf.InfluxDB, caName, portNum)
+	// makeD3(nodes)
+
+	// Start HTTP server to serve JSON for d3.js (WIP)
+	// serve(conf.BindAddress, fabrics)
+
 	//
 	// Code below is deprecated
 	//
-
-	for _, caName := range caNames {
-		var ca C.umad_ca_t
-
-		fabrics[caName] = make(map[int]*Fabric)
-
-		// Pointer to char array will be allocated on C heap; must free pointer explicitly
-		ca_name := C.CString(caName)
-
-		// TODO: Replace umad_get_ca() with pure Go implementation
-		if ret := C.umad_get_ca(ca_name, &ca); ret == 0 {
-			var (
-				config C.ibnd_config_t
-				err    error
-			)
-
-			fmt.Printf("%s: %#v\n\n", caName, ca)
-
-			// Iterate over HCA's ports and perform fabric discovery from each
-			for _, v := range ca.ports {
-				if v == nil {
-					continue
-				}
-
-				portNum := int(v.portnum)
-
-				smInfo(caName, portNum)
-
-				fmt.Printf("port %d: %#v\n\n", portNum, ca.ports[portNum])
-				fabrics[caName][portNum] = &Fabric{}
-
-				// Return pointer to ibnd_fabric_t struct
-				// ibnd_fabric_t *ibnd_discover_fabric(char *ca_name, int ca_port, ib_portid_t *from, ibnd_config_t *config)
-				fabrics[caName][portNum].ibndFabric, err = C.ibnd_discover_fabric(
-					&ca.ca_name[0], C.int(portNum), nil, &config)
-
-				if err != nil {
-					fmt.Println("Unable to discover fabric:", err)
-					os.Exit(1)
-				}
-
-				mgmt_classes := [3]C.int{C.IB_SMI_CLASS, C.IB_SA_CLASS, C.IB_PERFORMANCE_CLASS}
-
-				// struct ibmad_port *mad_rpc_open_port(char *dev_name, int dev_port, int *mgmt_classes, int num_classes)
-				port := C.mad_rpc_open_port(ca_name, v.portnum, &mgmt_classes[0], C.int(len(mgmt_classes)))
-
-				if port == nil {
-					// TODO: Delay ibnd_discover_fabric until we have successfully opened the port
-					fmt.Printf("Unable to open MAD port: %s: %d", caName, v.portnum)
-					C.ibnd_destroy_fabric(fabrics[caName][portNum].ibndFabric)
-					continue
-				}
-
-				fabrics[caName][portNum].ibmadPort = port
-
-				fmt.Printf("ibmad_port: %#v\n", fabrics[caName][portNum].ibmadPort)
-
-				// Walk switch nodes in fabric
-				nodes := iterateSwitches(fabrics[caName][portNum], &nnMap)
-				writeInfluxDB(nodes, conf.InfluxDB, caName, portNum)
-				makeD3(nodes)
-
-				fabrics[caName][portNum].mutex.Lock()
-
-				// Close MAD port
-				C.mad_rpc_close_port(fabrics[caName][portNum].ibmadPort)
-
-				// Free memory and resources associated with fabric
-				C.ibnd_destroy_fabric(fabrics[caName][portNum].ibndFabric)
-
-				fabrics[caName][portNum].mutex.Unlock()
-			}
-
-			C.umad_release_ca(&ca)
-		}
-
-		C.free(unsafe.Pointer(ca_name))
-	}
-
-	// Start HTTP server to serve JSON for d3.js (WIP)
-	//serve(conf.BindAddress, fabrics)
-
-	C.umad_done()
 }
