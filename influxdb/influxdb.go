@@ -13,14 +13,14 @@ import (
 	"strconv"
 	"time"
 
-	influxdb "github.com/influxdata/influxdb/client/v2"
+	"github.com/influxdata/influxdb/client/v2"
 
 	"github.com/dswarbrick/fabricmon/config"
 )
 
 func writeInfluxDB(nodes []Node, conf config.InfluxDBConf, caName string, portNum int) {
 	// Batch to hold InfluxDB points
-	batch, err := influxdb.NewBatchPoints(influxdb.BatchPointsConfig{
+	batch, err := v2.NewBatchPoints(v2.BatchPointsConfig{
 		Database:  conf.Database,
 		Precision: "s",
 	})
@@ -54,7 +54,7 @@ func writeInfluxDB(nodes []Node, conf config.InfluxDBConf, caName string, portNu
 					fields["value"] = int64(v & 0x7fffffffffffffff)
 				}
 
-				if point, err := influxdb.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
+				if point, err := v2.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
 					batch.AddPoint(point)
 				}
 			}
@@ -65,8 +65,8 @@ func writeInfluxDB(nodes []Node, conf config.InfluxDBConf, caName string, portNu
 	writeBatch(conf, batch)
 }
 
-func writeBatch(conf config.InfluxDBConf, batch influxdb.BatchPoints) {
-	client, err := influxdb.NewHTTPClient(influxdb.HTTPConfig{
+func writeBatch(conf config.InfluxDBConf, batch v2.BatchPoints) {
+	client, err := v2.NewHTTPClient(v2.HTTPConfig{
 		Addr:     conf.Url,
 		Username: conf.Username,
 		Password: conf.Password,

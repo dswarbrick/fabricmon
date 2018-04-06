@@ -26,6 +26,7 @@ type FabricmonConf struct {
 }
 
 // Duration is a TOML wrapper type for time.Duration.
+// See https://github.com/golang/go/issues/24174
 type Duration time.Duration
 
 // String returns the string representation of the duration.
