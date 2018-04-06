@@ -80,6 +80,8 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 					// Workaround is to either convert to int64 (i.e., truncate to 63 bits).
 					if v, ok := value.(uint64); ok {
 						fields["value"] = int64(v & 0x7fffffffffffffff)
+					} else {
+						fields["value"] = int64(v)
 					}
 
 					if point, err := client.NewPoint("fabricmon_counters", tags, fields, now); err == nil {

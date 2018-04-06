@@ -86,20 +86,6 @@ var portPhysStates = [...]string{
 
 var nnMap NodeNameMap
 
-// getCounterUint32 decodes the specified counter from the supplied buffer and returns the uint32
-// counter value.
-func getCounterUint32(buf *C.uint8_t, counter uint32) (v uint32) {
-	C.mad_decode_field(buf, counter, unsafe.Pointer(&v))
-	return v
-}
-
-// getCounterUint64 decodes the specified counter from the supplied buffer and returns the uint64
-// counter value.
-func getCounterUint64(buf *C.uint8_t, counter uint32) (v uint64) {
-	C.mad_decode_field(buf, counter, unsafe.Pointer(&v))
-	return v
-}
-
 // getPortCounters retrieves all counters for a specific port.
 func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibmad_port) (map[uint32]interface{}, error) {
 	var buf [1024]byte
@@ -130,7 +116,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 				continue // Counter not supported
 			}
 
-			counters[counter] = getCounterUint32(pmaBuf, counter)
+			counters[counter] = uint32(C.mad_get_field(unsafe.Pointer(&buf), 0, counter))
 		}
 	}
 
@@ -146,7 +132,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 
 	if pmaBuf != nil {
 		for counter, _ := range infiniband.ExtCounterMap {
-			counters[counter] = getCounterUint64(pmaBuf, counter)
+			counters[counter] = uint64(C.mad_get_field64(unsafe.Pointer(&buf), 0, counter))
 		}
 	}
 
@@ -383,9 +369,9 @@ func router(input chan infiniband.Fabric, writers []func(chan infiniband.Fabric)
 		go w(outputs[i])
 	}
 
-	for m := range input {
+	for fabric := range input {
 		for _, c := range outputs {
-			c <- m
+			c <- fabric
 		}
 	}
 
