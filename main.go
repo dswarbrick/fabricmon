@@ -360,13 +360,13 @@ func caDiscoverFabric(ca C.umad_ca_t, outputDir string, output chan infiniband.F
 
 // router duplicates a Fabric struct received via channel and outputs it to multiple receiver
 // channels.
-func router(input chan infiniband.Fabric, writers []func(chan infiniband.Fabric)) {
+func router(input chan infiniband.Fabric, writers []influxdb.FMWriter) {
 	outputs := make([]chan infiniband.Fabric, len(writers))
 
 	// Create output channels for workers, and start worker goroutine
 	for i, w := range writers {
 		outputs[i] = make(chan infiniband.Fabric)
-		go w(outputs[i])
+		go w.Receiver(outputs[i])
 	}
 
 	for fabric := range input {
@@ -454,11 +454,11 @@ func main() {
 	}
 
 	if *daemonize {
-		writers := []func(chan infiniband.Fabric){}
+		writers := []influxdb.FMWriter{}
 
 		for _, c := range conf.InfluxDB {
-			w := influxdb.InfluxDBWriter{c}
-			writers = append(writers, w.Receiver)
+			w := &influxdb.InfluxDBWriter{c}
+			writers = append(writers, w)
 		}
 
 		splitter := make(chan infiniband.Fabric)

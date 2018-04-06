@@ -18,10 +18,17 @@ import (
 	"github.com/dswarbrick/fabricmon/infiniband"
 )
 
+// TODO: Move this to a more generic subpackage
+type FMWriter interface {
+	Receiver(chan infiniband.Fabric)
+}
+
 type InfluxDBWriter struct {
 	Config config.InfluxDBConf
 }
 
+// TODO: Rename this to something more descriptive (and which is not so easily confused with method
+// receivers).
 func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 	c, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr:     w.Config.Url,
