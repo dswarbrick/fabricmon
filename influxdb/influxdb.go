@@ -19,6 +19,20 @@ import (
 	"github.com/dswarbrick/fabricmon/infiniband"
 )
 
+type InfluxDBWriter struct {
+	Config config.InfluxDBConf
+}
+
+func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
+	log.Printf("%#v\n", w.Config)
+
+	for m := range input {
+		log.Printf("InfluxDB receiver: %#v\n", m)
+	}
+
+	log.Println("InfluxDB receiver input channel closed. Exiting function.")
+}
+
 func writeInfluxDB(nodes []infiniband.Node, conf config.InfluxDBConf, caName string, portNum int) {
 	// Batch to hold InfluxDB points
 	batch, err := client.NewBatchPoints(client.BatchPointsConfig{
@@ -87,12 +101,4 @@ func writeBatch(conf config.InfluxDBConf, batch client.BatchPoints) {
 	}
 
 	client.Close()
-}
-
-func Receiver(input chan infiniband.Fabric) {
-	for m := range input {
-		log.Printf("InfluxDB receiver: %#v\n", m)
-	}
-
-	log.Println("InfluxDB receiver input channel closed. Exiting function.")
 }

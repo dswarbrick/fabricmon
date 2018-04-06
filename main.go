@@ -468,7 +468,13 @@ func main() {
 	}
 
 	if *daemonize {
-		writers := []func(chan infiniband.Fabric){influxdb.Receiver}
+		writers := []func(chan infiniband.Fabric){}
+
+		for _, c := range conf.InfluxDB {
+			w := influxdb.InfluxDBWriter{c}
+			writers = append(writers, w.Receiver)
+		}
+
 		splitter := make(chan infiniband.Fabric)
 		go router(splitter, writers)
 
