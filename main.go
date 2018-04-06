@@ -318,7 +318,8 @@ func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []i
 	return nodes
 }
 
-func caDiscoverFabric(ca C.umad_ca_t, outputDir string) {
+func caDiscoverFabric(ca C.umad_ca_t, outputDir string, output chan infiniband.Fabric) {
+	hostname, _ := os.Hostname()
 	caName := C.GoString(&ca.ca_name[0])
 
 	mgmt_classes := [3]C.int{C.IB_SMI_CLASS, C.IB_SA_CLASS, C.IB_PERFORMANCE_CLASS}
@@ -355,10 +356,13 @@ func caDiscoverFabric(ca C.umad_ca_t, outputDir string) {
 			C.mad_rpc_close_port(mad_port)
 
 			if outputDir != "" {
-				hostname, _ := os.Hostname()
 				filename := fmt.Sprintf("%s-%s-p%d.json", hostname, caName, portNum)
 
 				writeD3JSON(path.Join(outputDir, filename), nodes)
+			}
+
+			if output != nil {
+				output <- infiniband.Fabric{hostname, caName, portNum, nodes}
 			}
 		} else {
 			log.Printf("ERROR: Unable to open MAD port: %s: %d", caName, portNum)
@@ -368,18 +372,18 @@ func caDiscoverFabric(ca C.umad_ca_t, outputDir string) {
 	}
 }
 
-func router(input chan int, writers []func(chan int)) {
-	outputs := make([]chan int, len(writers))
+// router duplicates a Fabric struct received via channel and outputs it to multiple receiver
+// channels.
+func router(input chan infiniband.Fabric, writers []func(chan infiniband.Fabric)) {
+	outputs := make([]chan infiniband.Fabric, len(writers))
 
 	// Create output channels for workers, and start worker goroutine
 	for i, w := range writers {
-		outputs[i] = make(chan int)
+		outputs[i] = make(chan infiniband.Fabric)
 		go w(outputs[i])
 	}
 
 	for m := range input {
-		log.Printf("Splitter: %#v\n", m)
-
 		for _, c := range outputs {
 			c <- m
 		}
@@ -390,7 +394,7 @@ func router(input chan int, writers []func(chan int)) {
 		close(c)
 	}
 
-	log.Println("Splitter input channel closed. Exiting function.")
+	log.Println("Router input channel closed. Exiting function.")
 }
 
 func main() {
@@ -460,12 +464,12 @@ func main() {
 
 	// First sweep.
 	for _, ca := range umad_ca_list {
-		caDiscoverFabric(ca, *jsonDir)
+		caDiscoverFabric(ca, *jsonDir, nil)
 	}
 
 	if *daemonize {
-		writers := []func(chan int){influxdb.Receiver}
-		splitter := make(chan int)
+		writers := []func(chan infiniband.Fabric){influxdb.Receiver}
+		splitter := make(chan infiniband.Fabric)
 		go router(splitter, writers)
 
 		ticker := time.NewTicker(time.Duration(conf.PollInterval))
@@ -477,8 +481,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				for _, ca := range umad_ca_list {
-					caDiscoverFabric(ca, *jsonDir)
-					splitter <- 123
+					caDiscoverFabric(ca, *jsonDir, splitter)
 				}
 			case <-shutdownChan:
 				log.Println("Shutdown received in polling loop.")

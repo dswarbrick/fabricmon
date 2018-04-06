@@ -89,7 +89,7 @@ func writeBatch(conf config.InfluxDBConf, batch client.BatchPoints) {
 	client.Close()
 }
 
-func Receiver(input chan int) {
+func Receiver(input chan infiniband.Fabric) {
 	for m := range input {
 		log.Printf("InfluxDB receiver: %#v\n", m)
 	}

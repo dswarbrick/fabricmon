@@ -29,7 +29,7 @@ install:
 	@go install $(LDFLAGS)
 
 fmt:
-	@go fmt
+	@go fmt ./...
 
 check: fmt
 	@go vet

@@ -7,6 +7,13 @@ package infiniband
 // #include <ibnetdisc.h>
 import "C"
 
+type Fabric struct {
+	Hostname   string
+	CAName     string
+	SourcePort int
+	Nodes      []Node
+}
+
 type Node struct {
 	GUID     uint64
 	NodeType int
