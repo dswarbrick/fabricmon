@@ -13,9 +13,11 @@ import (
 )
 
 type d3Node struct {
-	Id       string `json:"id"`
+	ID       string `json:"id"`
 	Desc     string `json:"desc"`
 	NodeType int    `json:"nodetype"`
+	VendorID uint16 `json:"vendor_id"`
+	DeviceID uint16 `json:"device_id"`
 }
 
 type d3Link struct {
@@ -37,9 +39,11 @@ func makeD3(nodes []Node) []byte {
 
 	for _, node := range nodes {
 		d3n := d3Node{
-			Id:       fmt.Sprintf("%016x", node.guid),
+			ID:       fmt.Sprintf("%016x", node.guid),
 			NodeType: node.nodeType,
 			Desc:     nnMap.remapNodeName(node.guid, node.nodeDesc),
+			VendorID: node.vendorID,
+			DeviceID: node.deviceID,
 		}
 
 		topo.Nodes = append(topo.Nodes, d3n)

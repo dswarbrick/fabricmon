@@ -179,7 +179,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 
 	if (capMask&C.IB_PM_EXT_WIDTH_SUPPORTED == 0) && (capMask&C.IB_PM_EXT_WIDTH_NOIETF_SUP == 0) {
 		// TODO: Fetch standard data / packet counters if extended counters are not supported
-		// (unlikely).
+		// (pre-QDR hardware).
 		log.Printf("NOTICE: Port %d does not support extended counters", portNum)
 		return counters, nil
 	}

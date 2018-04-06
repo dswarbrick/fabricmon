@@ -1,6 +1,6 @@
 /*
  * FabricMon - an InfiniBand fabric monitor daemon.
- * Copyright 2017 Daniel Swarbrick
+ * Copyright 2017-18 Daniel Swarbrick
  */
 
 var nodeTypes = {1: "HCA", 2: "Switch", 3: "Router"},
@@ -37,6 +37,15 @@ function handleNodeClick(d) {
   d3.select("#sel_node_type").text(nodeTypes[d.nodetype]);
   d3.select("#sel_node_guid").text(d.id);
   d3.select("#sel_node_desc").text(d.desc);
+
+  if (d.vendor_id)
+    d3.select("#sel_node_vendor_id").text("0x" + d.vendor_id.toString(16));
+
+  if (d.device_id)
+    d3.select("#sel_node_device_id").text("0x" + d.device_id.toString(16));
+
+  if (d.vendor_id && d.device_id)
+    d3.select("#sel_node_model").text(lookupDevice(d.vendor_id, d.device_id));
 
   // Build array of nodes that are linked to this node
   links.forEach(function (l) {
