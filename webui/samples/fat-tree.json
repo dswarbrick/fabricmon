@@ -3,82 +3,98 @@
     {
       "id": "003048ffff95ac63",
       "desc": "root-sw1",
-      "nodetype": 2
+      "nodetype": 2,
+      "vendor_id": 713
     },
     {
       "id": "003048ffff95fd1a",
       "desc": "leaf-sw1",
-      "nodetype": 2
+      "nodetype": 2,
+      "vendor_id": 713
     },
     {
       "id": "003048ffff95bc92",
       "desc": "leaf-sw2",
-      "nodetype": 2
+      "nodetype": 2,
+      "vendor_id": 713
     },
     {
       "id": "003048ffff9553a3",
       "desc": "leaf-sw3",
-      "nodetype": 2
+      "nodetype": 2,
+      "vendor_id": 713
     },
     {
       "id": "f452140300dad7ff",
       "desc": "st101a-1",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     },
     {
       "id": "f45214030039c991",
       "desc": "st101a-2",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     },
     {
       "id": "f452140300e8e414",
       "desc": "gw101a-1",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     },
     {
       "id": "f4521403002dd60e",
       "desc": "n101a-1",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     },
     {
       "id": "f452140300799f01",
       "desc": "st201a-1",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     },
     {
       "id": "f452140300101f40",
       "desc": "st201a-2",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     },
     {
       "id": "f452140300996604",
       "desc": "gw201a-1",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     },
     {
       "id": "f452140300b6b712",
       "desc": "n201a-2",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     },
     {
       "id": "f4521403008f4a89",
       "desc": "st301a-1",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     },
     {
       "id": "f45214030062840c",
       "desc": "st301a-2",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     },
     {
       "id": "f452140300fa7f87",
       "desc": "gw301a-1",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     },
     {
       "id": "f452140300a10281",
       "desc": "n301a-1",
-      "nodetype": 1
+      "nodetype": 1,
+      "vendor_id": 713
     }
   ],
   "links": [
