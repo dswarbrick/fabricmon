@@ -508,8 +508,6 @@ func main() {
 	C.umad_done()
 
 	// TODO: Re-enable these
-	// writeInfluxDB(nodes, conf.InfluxDB, caName, portNum)
-
 	// Start HTTP server to serve JSON for d3.js (WIP)
 	// serve(conf.BindAddress, fabrics)
 }
