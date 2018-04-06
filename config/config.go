@@ -3,7 +3,7 @@
 
 // Config parsing.
 
-package main
+package config
 
 import (
 	"fmt"
@@ -12,17 +12,17 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-type influxdbConf struct {
+type InfluxDBConf struct {
 	Url      string
 	Database string
 	Username string
 	Password string
 }
 
-type fabricmonConf struct {
+type FabricmonConf struct {
 	BindAddress  string   `toml:"bind_address"`
 	PollInterval Duration `toml:"poll_interval"`
-	InfluxDB     influxdbConf
+	InfluxDB     []InfluxDBConf
 }
 
 // Duration is a TOML wrapper type for time.Duration.
@@ -56,9 +56,9 @@ func (d Duration) MarshalText() (text []byte, err error) {
 	return []byte(d.String()), nil
 }
 
-func readConfig(configFile string) (fabricmonConf, error) {
+func ReadConfig(configFile string) (FabricmonConf, error) {
 	// Defaults
-	conf := fabricmonConf{
+	conf := FabricmonConf{
 		BindAddress:  ":8090",
 		PollInterval: Duration(time.Second * 10),
 	}

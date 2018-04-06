@@ -33,6 +33,7 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/dswarbrick/fabricmon/config"
 	"github.com/dswarbrick/fabricmon/version"
 )
 
@@ -420,7 +421,7 @@ func main() {
 
 	kingpin.Parse()
 
-	conf, err := readConfig(*configFile)
+	conf, err := config.ReadConfig(*configFile)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

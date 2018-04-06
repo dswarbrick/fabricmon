@@ -14,9 +14,11 @@ import (
 	"time"
 
 	influxdb "github.com/influxdata/influxdb/client/v2"
+
+	"github.com/dswarbrick/fabricmon/config"
 )
 
-func writeInfluxDB(nodes []Node, conf influxdbConf, caName string, portNum int) {
+func writeInfluxDB(nodes []Node, conf config.InfluxDBConf, caName string, portNum int) {
 	// Batch to hold InfluxDB points
 	batch, err := influxdb.NewBatchPoints(influxdb.BatchPointsConfig{
 		Database:  conf.Database,
@@ -63,7 +65,7 @@ func writeInfluxDB(nodes []Node, conf influxdbConf, caName string, portNum int) 
 	writeBatch(conf, batch)
 }
 
-func writeBatch(conf influxdbConf, batch influxdb.BatchPoints) {
+func writeBatch(conf config.InfluxDBConf, batch influxdb.BatchPoints) {
 	client, err := influxdb.NewHTTPClient(influxdb.HTTPConfig{
 		Addr:     conf.Url,
 		Username: conf.Username,
