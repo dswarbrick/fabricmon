@@ -34,6 +34,8 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/dswarbrick/fabricmon/config"
+	"github.com/dswarbrick/fabricmon/infiniband"
+	"github.com/dswarbrick/fabricmon/influxdb"
 	"github.com/dswarbrick/fabricmon/version"
 )
 
@@ -62,52 +64,6 @@ type Fabric struct {
 
 // FabricMap is a two-dimensional map holding the Fabric struct for each HCA / port pair.
 type FabricMap map[string]map[int]*Fabric
-
-type Node struct {
-	guid     uint64
-	nodeType int
-	nodeDesc string
-	vendorID uint16
-	deviceID uint16
-	ports    []Port
-}
-
-type Port struct {
-	guid       uint64
-	remoteGuid uint64
-	counters   map[uint32]interface{}
-}
-
-// Standard (32-bit) counters and their display names
-// TODO: Implement warnings and / or automatically reset counters when they are close to reaching
-// 	     their maximum permissible value (according to IBTA spec).
-var stdCounterMap = map[uint32]string{
-	C.IB_PC_ERR_SYM_F:        "SymbolErrorCounter",
-	C.IB_PC_LINK_RECOVERS_F:  "LinkErrorRecoveryCounter",
-	C.IB_PC_LINK_DOWNED_F:    "LinkDownedCounter",
-	C.IB_PC_ERR_RCV_F:        "PortRcvErrors",
-	C.IB_PC_ERR_PHYSRCV_F:    "PortRcvRemotePhysicalErrors",
-	C.IB_PC_ERR_SWITCH_REL_F: "PortRcvSwitchRelayErrors",
-	C.IB_PC_XMT_DISCARDS_F:   "PortXmitDiscards",
-	C.IB_PC_ERR_XMTCONSTR_F:  "PortXmitConstraintErrors",
-	C.IB_PC_ERR_RCVCONSTR_F:  "PortRcvConstraintErrors",
-	C.IB_PC_ERR_LOCALINTEG_F: "LocalLinkIntegrityErrors",
-	C.IB_PC_ERR_EXCESS_OVR_F: "ExcessiveBufferOverrunErrors",
-	C.IB_PC_VL15_DROPPED_F:   "VL15Dropped",
-	C.IB_PC_XMT_WAIT_F:       "PortXmitWait", // Requires cap mask IB_PM_PC_XMIT_WAIT_SUP
-}
-
-// Extended (64-bit) counters and their display names.
-var extCounterMap = map[uint32]string{
-	C.IB_PC_EXT_XMT_BYTES_F: "PortXmitData",
-	C.IB_PC_EXT_RCV_BYTES_F: "PortRcvData",
-	C.IB_PC_EXT_XMT_PKTS_F:  "PortXmitPkts",
-	C.IB_PC_EXT_RCV_PKTS_F:  "PortRcvPkts",
-	C.IB_PC_EXT_XMT_UPKTS_F: "PortUnicastXmitPkts",
-	C.IB_PC_EXT_RCV_UPKTS_F: "PortUnicastRcvPkts",
-	C.IB_PC_EXT_XMT_MPKTS_F: "PortMulticastXmitPkts",
-	C.IB_PC_EXT_RCV_MPKTS_F: "PortMulticastRcvPkts",
-}
 
 var portStates = [...]string{
 	"No state change", // Valid only on Set() port state
@@ -169,7 +125,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 
 	if pmaBuf != nil {
 		// Iterate over standard counters
-		for counter, _ := range stdCounterMap {
+		for counter, _ := range infiniband.StdCounterMap {
 			if (counter == C.IB_PC_XMT_WAIT_F) && (capMask&C.IB_PM_PC_XMIT_WAIT_SUP == 0) {
 				continue // Counter not supported
 			}
@@ -189,7 +145,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS_EXT, ibmadPort)
 
 	if pmaBuf != nil {
-		for counter, _ := range extCounterMap {
+		for counter, _ := range infiniband.ExtCounterMap {
 			counters[counter] = getCounterUint64(pmaBuf, counter)
 		}
 	}
@@ -258,14 +214,14 @@ func smInfo(caName string, portNum int) {
 		portid.lid, guid, act, prio, state, smStateMap[state])
 }
 
-func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
+func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []infiniband.Port {
 	var portid C.ib_portid_t
 
 	log.Printf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x\n",
 		node._type, nnMap.remapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
 		node.numports, node.guid)
 
-	ports := make([]Port, node.numports+1)
+	ports := make([]infiniband.Port, node.numports+1)
 
 	C.ib_portid_set(&portid, C.int(node.smalid), 0, 0)
 
@@ -282,7 +238,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))
 		arrayPtr += unsafe.Sizeof(arrayPtr)
 
-		myPort := Port{guid: uint64(pp.guid)}
+		myPort := infiniband.Port{GUID: uint64(pp.guid)}
 
 		portState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_STATE_F)
 		physState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_PHYS_STATE_F)
@@ -302,7 +258,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 				rp.node._type, rp.node.guid,
 				nnMap.remapNodeName(uint64(rp.node.guid), C.GoString(&rp.node.nodedesc[0])))
 
-			myPort.remoteGuid = uint64(rp.node.guid)
+			myPort.RemoteGUID = uint64(rp.node.guid)
 
 			// Port counters will only be fetched if port is ACTIVE + LINKUP
 			if (portState == C.IB_LINK_ACTIVE) && (physState == C.IB_PORT_PHYS_STATE_LINKUP) {
@@ -325,7 +281,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 				}
 
 				if counters, err := getPortCounters(&portid, portNum, mad_port); err == nil {
-					myPort.counters = counters
+					myPort.Counters = counters
 				} else {
 					log.Printf("ERROR: Cannot get counters for port %d: %s\n", portNum, err)
 				}
@@ -338,22 +294,22 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 	return ports
 }
 
-func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []Node {
-	nodes := make([]Node, 0)
+func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []infiniband.Node {
+	nodes := make([]infiniband.Node, 0)
 
 	for node := fabric.nodes; node != nil; node = node.next {
-		myNode := Node{
-			guid:     uint64(node.guid),
-			nodeType: int(node._type),
-			nodeDesc: C.GoString(&node.nodedesc[0]),
-			vendorID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_VENDORID_F)),
-			deviceID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_DEVID_F)),
+		myNode := infiniband.Node{
+			GUID:     uint64(node.guid),
+			NodeType: int(node._type),
+			NodeDesc: C.GoString(&node.nodedesc[0]),
+			VendorID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_VENDORID_F)),
+			DeviceID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_DEVID_F)),
 		}
 
 		log.Printf("node: %#v\n", myNode)
 
 		if node._type == C.IB_NODE_SWITCH {
-			myNode.ports = walkPorts(node, mad_port)
+			myNode.Ports = walkPorts(node, mad_port)
 		}
 
 		nodes = append(nodes, myNode)
@@ -410,6 +366,31 @@ func caDiscoverFabric(ca C.umad_ca_t, outputDir string) {
 
 		C.ibnd_destroy_fabric(fabric)
 	}
+}
+
+func router(input chan int, writers []func(chan int)) {
+	outputs := make([]chan int, len(writers))
+
+	// Create output channels for workers, and start worker goroutine
+	for i, w := range writers {
+		outputs[i] = make(chan int)
+		go w(outputs[i])
+	}
+
+	for m := range input {
+		log.Printf("Splitter: %#v\n", m)
+
+		for _, c := range outputs {
+			c <- m
+		}
+	}
+
+	// Close output channels
+	for _, c := range outputs {
+		close(c)
+	}
+
+	log.Println("Splitter input channel closed. Exiting function.")
 }
 
 func main() {
@@ -483,6 +464,10 @@ func main() {
 	}
 
 	if *daemonize {
+		writers := []func(chan int){influxdb.Receiver}
+		splitter := make(chan int)
+		go router(splitter, writers)
+
 		ticker := time.NewTicker(time.Duration(conf.PollInterval))
 		defer ticker.Stop()
 
@@ -493,12 +478,15 @@ func main() {
 			case <-ticker.C:
 				for _, ca := range umad_ca_list {
 					caDiscoverFabric(ca, *jsonDir)
+					splitter <- 123
 				}
 			case <-shutdownChan:
 				log.Println("Shutdown received in polling loop.")
 				break Loop
 			}
 		}
+
+		close(splitter)
 	}
 
 	log.Println("Cleaning up")

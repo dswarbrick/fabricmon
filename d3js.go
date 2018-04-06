@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+
+	"github.com/dswarbrick/fabricmon/infiniband"
 )
 
 type d3Node struct {
@@ -32,27 +34,27 @@ type d3Topology struct {
 
 // makeD3 transforms the internal representation of InfiniBand nodes into d3.js nodes and links,
 // and returns marshalled JSON.
-func makeD3(nodes []Node) []byte {
+func makeD3(nodes []infiniband.Node) []byte {
 	nnMap, _ := NewNodeNameMap()
 
 	topo := d3Topology{}
 
 	for _, node := range nodes {
 		d3n := d3Node{
-			ID:       fmt.Sprintf("%016x", node.guid),
-			NodeType: node.nodeType,
-			Desc:     nnMap.remapNodeName(node.guid, node.nodeDesc),
-			VendorID: node.vendorID,
-			DeviceID: node.deviceID,
+			ID:       fmt.Sprintf("%016x", node.GUID),
+			NodeType: node.NodeType,
+			Desc:     nnMap.remapNodeName(node.GUID, node.NodeDesc),
+			VendorID: node.VendorID,
+			DeviceID: node.DeviceID,
 		}
 
 		topo.Nodes = append(topo.Nodes, d3n)
 
-		for _, port := range node.ports {
-			if port.remoteGuid != 0 {
+		for _, port := range node.Ports {
+			if port.RemoteGUID != 0 {
 				topo.Links = append(topo.Links, d3Link{
-					fmt.Sprintf("%016x", node.guid),
-					fmt.Sprintf("%016x", port.remoteGuid),
+					fmt.Sprintf("%016x", node.GUID),
+					fmt.Sprintf("%016x", port.RemoteGUID),
 				})
 			}
 		}
@@ -67,7 +69,7 @@ func makeD3(nodes []Node) []byte {
 	return jsonBuf
 }
 
-func writeD3JSON(filename string, nodes []Node) {
+func writeD3JSON(filename string, nodes []infiniband.Node) {
 	buf := makeD3(nodes)
 
 	if err := ioutil.WriteFile(filename, buf, 0644); err != nil {

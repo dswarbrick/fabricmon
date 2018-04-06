@@ -4,7 +4,7 @@
 // InfluxDB client functions.
 // TODO: Add support for specifying retention policy.
 
-package main
+package influxdb
 
 import (
 	"fmt"
@@ -16,11 +16,12 @@ import (
 	"github.com/influxdata/influxdb/client/v2"
 
 	"github.com/dswarbrick/fabricmon/config"
+	"github.com/dswarbrick/fabricmon/infiniband"
 )
 
-func writeInfluxDB(nodes []Node, conf config.InfluxDBConf, caName string, portNum int) {
+func writeInfluxDB(nodes []infiniband.Node, conf config.InfluxDBConf, caName string, portNum int) {
 	// Batch to hold InfluxDB points
-	batch, err := v2.NewBatchPoints(v2.BatchPointsConfig{
+	batch, err := client.NewBatchPoints(client.BatchPointsConfig{
 		Database:  conf.Database,
 		Precision: "s",
 	})
@@ -34,17 +35,17 @@ func writeInfluxDB(nodes []Node, conf config.InfluxDBConf, caName string, portNu
 	now := time.Now()
 
 	for _, node := range nodes {
-		tags["guid"] = fmt.Sprintf("%016x", node.guid)
+		tags["guid"] = fmt.Sprintf("%016x", node.GUID)
 
-		for portNum, port := range node.ports {
+		for portNum, port := range node.Ports {
 			tags["port"] = strconv.Itoa(portNum)
 
-			for counter, value := range port.counters {
+			for counter, value := range port.Counters {
 				switch value.(type) {
 				case uint32:
-					tags["counter"] = stdCounterMap[counter]
+					tags["counter"] = infiniband.StdCounterMap[counter]
 				case uint64:
-					tags["counter"] = extCounterMap[counter]
+					tags["counter"] = infiniband.ExtCounterMap[counter]
 				}
 
 				// FIXME: InfluxDB < 1.6 does not support uint64
@@ -54,7 +55,7 @@ func writeInfluxDB(nodes []Node, conf config.InfluxDBConf, caName string, portNu
 					fields["value"] = int64(v & 0x7fffffffffffffff)
 				}
 
-				if point, err := v2.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
+				if point, err := client.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
 					batch.AddPoint(point)
 				}
 			}
@@ -65,8 +66,8 @@ func writeInfluxDB(nodes []Node, conf config.InfluxDBConf, caName string, portNu
 	writeBatch(conf, batch)
 }
 
-func writeBatch(conf config.InfluxDBConf, batch v2.BatchPoints) {
-	client, err := v2.NewHTTPClient(v2.HTTPConfig{
+func writeBatch(conf config.InfluxDBConf, batch client.BatchPoints) {
+	client, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr:     conf.Url,
 		Username: conf.Username,
 		Password: conf.Password,
@@ -86,4 +87,12 @@ func writeBatch(conf config.InfluxDBConf, batch v2.BatchPoints) {
 	}
 
 	client.Close()
+}
+
+func Receiver(input chan int) {
+	for m := range input {
+		log.Printf("InfluxDB receiver: %#v\n", m)
+	}
+
+	log.Println("InfluxDB receiver input channel closed. Exiting function.")
 }
