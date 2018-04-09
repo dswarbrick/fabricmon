@@ -18,11 +18,6 @@ import (
 	"github.com/dswarbrick/fabricmon/infiniband"
 )
 
-// TODO: Move this to a more generic subpackage
-type FMWriter interface {
-	Receiver(chan infiniband.Fabric)
-}
-
 type InfluxDBWriter struct {
 	Config config.InfluxDBConf
 }

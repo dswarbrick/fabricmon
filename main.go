@@ -35,8 +35,9 @@ import (
 
 	"github.com/dswarbrick/fabricmon/config"
 	"github.com/dswarbrick/fabricmon/infiniband"
-	"github.com/dswarbrick/fabricmon/influxdb"
 	"github.com/dswarbrick/fabricmon/version"
+	"github.com/dswarbrick/fabricmon/writer"
+	"github.com/dswarbrick/fabricmon/writer/influxdb"
 )
 
 const (
@@ -360,7 +361,7 @@ func caDiscoverFabric(ca C.umad_ca_t, outputDir string, output chan infiniband.F
 
 // router duplicates a Fabric struct received via channel and outputs it to multiple receiver
 // channels.
-func router(input chan infiniband.Fabric, writers []influxdb.FMWriter) {
+func router(input chan infiniband.Fabric, writers []writer.FMWriter) {
 	outputs := make([]chan infiniband.Fabric, len(writers))
 
 	// Create output channels for workers, and start worker goroutine
@@ -454,7 +455,7 @@ func main() {
 	}
 
 	if *daemonize {
-		writers := []influxdb.FMWriter{}
+		writers := []writer.FMWriter{}
 
 		for _, c := range conf.InfluxDB {
 			w := &influxdb.InfluxDBWriter{c}
