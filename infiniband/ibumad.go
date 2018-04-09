@@ -12,14 +12,18 @@
 //   os.Open -> os.OpenFile -> syscall.Open -> syscall.openat -> syscall.Syscall6(SYS_OPENAT, ...)
 // The openat() call is not intercepted by the libumad2sim.so LD_PRELOAD.
 
-package main
+package infiniband
 
-import "io/ioutil"
+import (
+	"io/ioutil"
+)
 
-const SYS_INFINIBAND = "/sys/class/infiniband"
+const (
+	SYS_INFINIBAND = "/sys/class/infiniband"
+)
 
 // getCANames is the functional equivalent of umad_get_cas_names()
-func getCANames() ([]string, error) {
+func GetCANames() ([]string, error) {
 	files, err := ioutil.ReadDir(SYS_INFINIBAND)
 	if err != nil {
 		return nil, err
