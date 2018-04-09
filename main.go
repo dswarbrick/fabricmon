@@ -79,13 +79,23 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, ibmadPort)
 
 	if pmaBuf != nil {
+		var selMask uint32
+
 		// Iterate over standard counters
-		for counter, _ := range infiniband.StdCounterMap {
-			if (counter == C.IB_PC_XMT_WAIT_F) && (capMask&C.IB_PM_PC_XMIT_WAIT_SUP == 0) {
+		for field, counter := range infiniband.StdCounterMap {
+			if (field == C.IB_PC_XMT_WAIT_F) && (capMask&C.IB_PM_PC_XMIT_WAIT_SUP == 0) {
 				continue // Counter not supported
 			}
 
-			counters[counter] = uint32(C.mad_get_field(unsafe.Pointer(&buf), 0, counter))
+			counters[field] = uint32(C.mad_get_field(unsafe.Pointer(&buf), 0, field))
+
+			if float64(counters[field].(uint32)) > (float64(counter.Limit) * 0.000000000001) {
+				selMask |= counter.Select
+			}
+		}
+
+		if selMask > 0 {
+			log.Printf("WARNING: Counter select mask: %#x\n", selMask)
 		}
 	}
 
@@ -100,8 +110,8 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS_EXT, ibmadPort)
 
 	if pmaBuf != nil {
-		for counter, _ := range infiniband.ExtCounterMap {
-			counters[counter] = uint64(C.mad_get_field64(unsafe.Pointer(&buf), 0, counter))
+		for field, _ := range infiniband.ExtCounterMap {
+			counters[field] = uint64(C.mad_get_field64(unsafe.Pointer(&buf), 0, field))
 		}
 	}
 

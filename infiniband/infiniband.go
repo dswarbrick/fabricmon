@@ -30,39 +30,42 @@ type Port struct {
 }
 
 type Counter struct {
-	Name  string
-	Limit uint64
+	Name   string
+	Limit  uint64
+	Select uint32 // CounterSelect (bits 0-15), CounterSelect2 (bits 16-23)
 }
 
-// Standard (32-bit) counters and their display names
-// Counter lengths defined in IBTA spec v1.3, table 247 (PortCounters).
+// Standard (32-bit) counters and their display names.
+// Counter lengths and field selects defined in IBTA spec v1.3, table 247 (PortCounters).
+// Note: Standard data counters are absent from this map (e.g. PortXmitData, PortRcvData,
+// PortXmitPkts, PortRcvPkts).
 var StdCounterMap = map[uint32]Counter{
-	C.IB_PC_ERR_SYM_F:        {"SymbolErrorCounter", 0xffff},
-	C.IB_PC_LINK_RECOVERS_F:  {"LinkErrorRecoveryCounter", 0xff},
-	C.IB_PC_LINK_DOWNED_F:    {"LinkDownedCounter", 0xff},
-	C.IB_PC_ERR_RCV_F:        {"PortRcvErrors", 0xffff},
-	C.IB_PC_ERR_PHYSRCV_F:    {"PortRcvRemotePhysicalErrors", 0xffff},
-	C.IB_PC_ERR_SWITCH_REL_F: {"PortRcvSwitchRelayErrors", 0xffff},
-	C.IB_PC_XMT_DISCARDS_F:   {"PortXmitDiscards", 0xffff},
-	C.IB_PC_ERR_XMTCONSTR_F:  {"PortXmitConstraintErrors", 0xff},
-	C.IB_PC_ERR_RCVCONSTR_F:  {"PortRcvConstraintErrors", 0xff},
-	C.IB_PC_ERR_LOCALINTEG_F: {"LocalLinkIntegrityErrors", 0x0f},
-	C.IB_PC_ERR_EXCESS_OVR_F: {"ExcessiveBufferOverrunErrors", 0x0f},
-	C.IB_PC_VL15_DROPPED_F:   {"VL15Dropped", 0xffff},
-	C.IB_PC_XMT_WAIT_F:       {"PortXmitWait", 0xffffffff}, // Requires cap mask IB_PM_PC_XMIT_WAIT_SUP
+	C.IB_PC_ERR_SYM_F:        {"SymbolErrorCounter", 0xffff, 0x1},
+	C.IB_PC_LINK_RECOVERS_F:  {"LinkErrorRecoveryCounter", 0xff, 0x2},
+	C.IB_PC_LINK_DOWNED_F:    {"LinkDownedCounter", 0xff, 0x4},
+	C.IB_PC_ERR_RCV_F:        {"PortRcvErrors", 0xffff, 0x8},
+	C.IB_PC_ERR_PHYSRCV_F:    {"PortRcvRemotePhysicalErrors", 0xffff, 0x10},
+	C.IB_PC_ERR_SWITCH_REL_F: {"PortRcvSwitchRelayErrors", 0xffff, 0x20},
+	C.IB_PC_XMT_DISCARDS_F:   {"PortXmitDiscards", 0xffff, 0x40},
+	C.IB_PC_ERR_XMTCONSTR_F:  {"PortXmitConstraintErrors", 0xff, 0x80},
+	C.IB_PC_ERR_RCVCONSTR_F:  {"PortRcvConstraintErrors", 0xff, 0x100},
+	C.IB_PC_ERR_LOCALINTEG_F: {"LocalLinkIntegrityErrors", 0xf, 0x200},
+	C.IB_PC_ERR_EXCESS_OVR_F: {"ExcessiveBufferOverrunErrors", 0xf, 0x400},
+	C.IB_PC_VL15_DROPPED_F:   {"VL15Dropped", 0xffff, 0x800},
+	C.IB_PC_XMT_WAIT_F:       {"PortXmitWait", 0xffffffff, 0x10000}, // Requires cap mask IB_PM_PC_XMIT_WAIT_SUP
 }
 
 // Extended (64-bit) counters and their display names.
-// Counter lengths defined in IBTA spec v1.3, table 247 (PortCounters).
+// Counter lengths and field selects defined in IBTA spec v1.3, table 260 (PortCountersExtended).
 var ExtCounterMap = map[uint32]Counter{
-	C.IB_PC_EXT_XMT_BYTES_F: {"PortXmitData", 0xffffffffffffffff},
-	C.IB_PC_EXT_RCV_BYTES_F: {"PortRcvData", 0xffffffffffffffff},
-	C.IB_PC_EXT_XMT_PKTS_F:  {"PortXmitPkts", 0xffffffffffffffff},
-	C.IB_PC_EXT_RCV_PKTS_F:  {"PortRcvPkts", 0xffffffffffffffff},
-	C.IB_PC_EXT_XMT_UPKTS_F: {"PortUnicastXmitPkts", 0xffffffffffffffff},
-	C.IB_PC_EXT_RCV_UPKTS_F: {"PortUnicastRcvPkts", 0xffffffffffffffff},
-	C.IB_PC_EXT_XMT_MPKTS_F: {"PortMulticastXmitPkts", 0xffffffffffffffff},
-	C.IB_PC_EXT_RCV_MPKTS_F: {"PortMulticastRcvPkts", 0xffffffffffffffff},
+	C.IB_PC_EXT_XMT_BYTES_F: {"PortXmitData", 0xffffffffffffffff, 0x1},
+	C.IB_PC_EXT_RCV_BYTES_F: {"PortRcvData", 0xffffffffffffffff, 0x2},
+	C.IB_PC_EXT_XMT_PKTS_F:  {"PortXmitPkts", 0xffffffffffffffff, 0x4},
+	C.IB_PC_EXT_RCV_PKTS_F:  {"PortRcvPkts", 0xffffffffffffffff, 0x8},
+	C.IB_PC_EXT_XMT_UPKTS_F: {"PortUnicastXmitPkts", 0xffffffffffffffff, 0x10},
+	C.IB_PC_EXT_RCV_UPKTS_F: {"PortUnicastRcvPkts", 0xffffffffffffffff, 0x20},
+	C.IB_PC_EXT_XMT_MPKTS_F: {"PortMulticastXmitPkts", 0xffffffffffffffff, 0x40},
+	C.IB_PC_EXT_RCV_MPKTS_F: {"PortMulticastRcvPkts", 0xffffffffffffffff, 0x80},
 }
 
 var portStates = [...]string{

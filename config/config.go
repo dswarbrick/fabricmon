@@ -20,9 +20,10 @@ type InfluxDBConf struct {
 }
 
 type FabricmonConf struct {
-	BindAddress  string   `toml:"bind_address"`
-	PollInterval Duration `toml:"poll_interval"`
-	InfluxDB     []InfluxDBConf
+	BindAddress    string   `toml:"bind_address"`
+	PollInterval   Duration `toml:"poll_interval"`
+	ResetThreshold uint     `toml:"counter_reset_threshold"`
+	InfluxDB       []InfluxDBConf
 }
 
 // Duration is a TOML wrapper type for time.Duration.
