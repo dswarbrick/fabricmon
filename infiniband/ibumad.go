@@ -21,6 +21,7 @@ import "C"
 import (
 	"io/ioutil"
 	"strings"
+	"unsafe"
 )
 
 const (
