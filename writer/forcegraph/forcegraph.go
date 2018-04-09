@@ -49,7 +49,7 @@ func (fg *ForceGraphWriter) Receiver(input chan infiniband.Fabric) {
 			buf := makeD3(fabric.Nodes)
 
 			// FIXME: This should write to a temporary file and perform an atomic move / rename,
-			// in case something is reading the .json file at the same time as we writer to it.
+			// in case something is reading the .json file at the same time as we write to it.
 			if err := ioutil.WriteFile(path.Join(fg.OutputDir, filename), buf, 0644); err != nil {
 				log.Println("ERROR: Cannot write d3.js JSON topology:", err)
 			}

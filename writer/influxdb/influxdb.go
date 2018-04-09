@@ -73,9 +73,9 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 				for counter, value := range port.Counters {
 					switch value.(type) {
 					case uint32:
-						tags["counter"] = infiniband.StdCounterMap[counter]
+						tags["counter"] = infiniband.StdCounterMap[counter].Name
 					case uint64:
-						tags["counter"] = infiniband.ExtCounterMap[counter]
+						tags["counter"] = infiniband.ExtCounterMap[counter].Name
 					}
 
 					// FIXME: InfluxDB < 1.6 does not support uint64
