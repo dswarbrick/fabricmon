@@ -3,7 +3,7 @@
 
 // JSON structs / serialisation for d3.js force graph
 
-package main
+package forcegraph
 
 import (
 	"encoding/json"
@@ -27,7 +27,7 @@ type d3Link struct {
 	Target string `json:"target"`
 }
 
-type d3Topology struct {
+type D3Topology struct {
 	Nodes []d3Node `json:"nodes"`
 	Links []d3Link `json:"links"`
 }
@@ -35,15 +35,15 @@ type d3Topology struct {
 // makeD3 transforms the internal representation of InfiniBand nodes into d3.js nodes and links,
 // and returns marshalled JSON.
 func makeD3(nodes []infiniband.Node) []byte {
-	nnMap, _ := NewNodeNameMap()
+	nnMap, _ := infiniband.NewNodeNameMap()
 
-	topo := d3Topology{}
+	topo := D3Topology{}
 
 	for _, node := range nodes {
 		d3n := d3Node{
 			ID:       fmt.Sprintf("%016x", node.GUID),
 			NodeType: node.NodeType,
-			Desc:     nnMap.remapNodeName(node.GUID, node.NodeDesc),
+			Desc:     nnMap.RemapNodeName(node.GUID, node.NodeDesc),
 			VendorID: node.VendorID,
 			DeviceID: node.DeviceID,
 		}
@@ -69,7 +69,7 @@ func makeD3(nodes []infiniband.Node) []byte {
 	return jsonBuf
 }
 
-func writeD3JSON(filename string, nodes []infiniband.Node) {
+func WriteD3JSON(filename string, nodes []infiniband.Node) {
 	buf := makeD3(nodes)
 
 	if err := ioutil.WriteFile(filename, buf, 0644); err != nil {

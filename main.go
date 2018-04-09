@@ -37,6 +37,7 @@ import (
 	"github.com/dswarbrick/fabricmon/infiniband"
 	"github.com/dswarbrick/fabricmon/version"
 	"github.com/dswarbrick/fabricmon/writer"
+	"github.com/dswarbrick/fabricmon/writer/forcegraph"
 	"github.com/dswarbrick/fabricmon/writer/influxdb"
 )
 
@@ -60,7 +61,7 @@ type Fabric struct {
 	mutex      sync.RWMutex
 	ibndFabric *C.struct_ibnd_fabric
 	ibmadPort  *C.struct_ibmad_port
-	topology   d3Topology
+	topology   forcegraph.D3Topology
 }
 
 // FabricMap is a two-dimensional map holding the Fabric struct for each HCA / port pair.
@@ -85,7 +86,7 @@ var portPhysStates = [...]string{
 	"Phy Test",
 }
 
-var nnMap NodeNameMap
+var nnMap infiniband.NodeNameMap
 
 // getPortCounters retrieves all counters for a specific port.
 func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibmad_port) (map[uint32]interface{}, error) {
@@ -205,7 +206,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []infini
 	var portid C.ib_portid_t
 
 	log.Printf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x\n",
-		node._type, nnMap.remapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
+		node._type, nnMap.RemapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
 		node.numports, node.guid)
 
 	ports := make([]infiniband.Port, node.numports+1)
@@ -243,7 +244,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []infini
 		if rp != nil {
 			log.Printf("Remote node type: %d, GUID: %#016x, descr: %s\n",
 				rp.node._type, rp.node.guid,
-				nnMap.remapNodeName(uint64(rp.node.guid), C.GoString(&rp.node.nodedesc[0])))
+				nnMap.RemapNodeName(uint64(rp.node.guid), C.GoString(&rp.node.nodedesc[0])))
 
 			myPort.RemoteGUID = uint64(rp.node.guid)
 
@@ -345,7 +346,7 @@ func caDiscoverFabric(ca C.umad_ca_t, outputDir string, output chan infiniband.F
 			if outputDir != "" {
 				filename := fmt.Sprintf("%s-%s-p%d.json", hostname, caName, portNum)
 
-				writeD3JSON(path.Join(outputDir, filename), nodes)
+				forcegraph.WriteD3JSON(path.Join(outputDir, filename), nodes)
 			}
 
 			if output != nil {
@@ -415,7 +416,7 @@ func main() {
 
 	log.Println("FabricMon", version.Info())
 
-	nnMap, _ = NewNodeNameMap()
+	nnMap, _ = infiniband.NewNodeNameMap()
 
 	// umad_ca_t contains an array of pointers - associated memory must be freed with
 	// umad_release_ca(umad_ca_t *ca)

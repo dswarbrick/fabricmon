@@ -3,7 +3,7 @@
 
 // Functions analogous to libosmcomp.
 
-package main
+package infiniband
 
 import (
 	"bufio"
@@ -73,7 +73,7 @@ func NewNodeNameMap() (NodeNameMap, error) {
 
 // remapNodeName attempts to map the specified GUID to a node description from the NodeNameMap. If
 // the GUID is not found in the map, the supplied node description is simply returned unmodified.
-func (n NodeNameMap) remapNodeName(guid uint64, nodeDesc string) string {
+func (n NodeNameMap) RemapNodeName(guid uint64, nodeDesc string) string {
 	if mapDesc, ok := n[guid]; ok {
 		return mapDesc
 	}
