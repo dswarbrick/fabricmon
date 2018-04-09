@@ -75,7 +75,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	// that represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather
 	// than just octets.
 
-	// Fetch standard (32 bit, some 16 bit) counters
+	// Fetch standard (32 bit (or less)) counters
 	pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, ibmadPort)
 
 	if pmaBuf != nil {
@@ -95,7 +95,12 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 		}
 
 		if selMask > 0 {
+			var pc [1024]byte
+
 			log.Printf("WARNING: Counter select mask: %#x\n", selMask)
+			if C.performance_reset_via(unsafe.Pointer(&pc), portId, C.int(portNum), C.uint(selMask), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, ibmadPort) == nil {
+				log.Println("ERROR: performance_reset_via failed")
+			}
 		}
 	}
 
