@@ -343,7 +343,12 @@ func caDiscoverFabric(ca C.umad_ca_t, output chan infiniband.Fabric) {
 			C.mad_rpc_close_port(mad_port)
 
 			if output != nil {
-				output <- infiniband.Fabric{hostname, caName, portNum, nodes}
+				output <- infiniband.Fabric{
+					Hostname:   hostname,
+					CAName:     caName,
+					SourcePort: portNum,
+					Nodes:      nodes,
+				}
 			}
 		} else {
 			log.Printf("ERROR: Unable to open MAD port: %s: %d", caName, portNum)
@@ -444,7 +449,7 @@ func main() {
 	}()
 
 	// Initialize writers slice with just the d3.js ForceGraphWriter
-	writers := []writer.FMWriter{&forcegraph.ForceGraphWriter{*jsonDir}}
+	writers := []writer.FMWriter{&forcegraph.ForceGraphWriter{OutputDir: *jsonDir}}
 
 	// First sweep.
 	for _, ca := range umad_ca_list {
@@ -453,7 +458,7 @@ func main() {
 
 	if *daemonize {
 		for _, c := range conf.InfluxDB {
-			w := &influxdb.InfluxDBWriter{c}
+			w := &influxdb.InfluxDBWriter{Config: c}
 			writers = append(writers, w)
 		}
 

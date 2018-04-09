@@ -40,6 +40,7 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 		log.Printf("InfluxDB (version %s) ping response: %v\n", version, rtt)
 	}
 
+	// TODO: Break this out to a separate, unexported method.
 	for fabric := range input {
 		batch, err := client.NewBatchPoints(client.BatchPointsConfig{
 			Database:  w.Config.Database,
