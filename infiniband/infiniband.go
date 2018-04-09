@@ -59,3 +59,22 @@ var ExtCounterMap = map[uint32]string{
 	C.IB_PC_EXT_XMT_MPKTS_F: "PortMulticastXmitPkts",
 	C.IB_PC_EXT_RCV_MPKTS_F: "PortMulticastRcvPkts",
 }
+
+var portStates = [...]string{
+	"No state change", // Valid only on Set() port state
+	"Down",            // Includes failed links
+	"Initialize",
+	"Armed",
+	"Active",
+}
+
+var portPhysStates = [...]string{
+	"No state change", // Valid only on Set() port state
+	"Sleep",
+	"Polling",
+	"Disabled",
+	"PortConfigurationTraining",
+	"LinkUp",
+	"LinkErrorRecovery",
+	"Phy Test",
+}
