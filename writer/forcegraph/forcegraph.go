@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"path"
 
 	"github.com/dswarbrick/fabricmon/infiniband"
 )
@@ -30,6 +31,28 @@ type d3Link struct {
 type D3Topology struct {
 	Nodes []d3Node `json:"nodes"`
 	Links []d3Link `json:"links"`
+}
+
+type ForceGraphWriter struct {
+	OutputDir string
+}
+
+// TODO: Rename this to something more descriptive (and which is not so easily confused with method
+// receivers).
+func (fg *ForceGraphWriter) Receiver(input chan infiniband.Fabric) {
+	for fabric := range input {
+
+		if fg.OutputDir != "" {
+			filename := fmt.Sprintf("%s-%s-p%d.json",
+				fabric.Hostname, fabric.CAName, fabric.SourcePort)
+
+			buf := makeD3(fabric.Nodes)
+
+			if err := ioutil.WriteFile(path.Join(fg.OutputDir, filename), buf, 0644); err != nil {
+				log.Println("ERROR: Cannot write d3.js JSON topology:", err)
+			}
+		}
+	}
 }
 
 // makeD3 transforms the internal representation of InfiniBand nodes into d3.js nodes and links,
@@ -67,12 +90,4 @@ func makeD3(nodes []infiniband.Node) []byte {
 	}
 
 	return jsonBuf
-}
-
-func WriteD3JSON(filename string, nodes []infiniband.Node) {
-	buf := makeD3(nodes)
-
-	if err := ioutil.WriteFile(filename, buf, 0644); err != nil {
-		log.Println("ERROR: Cannot write d3.js JSON topology:", err)
-	}
 }

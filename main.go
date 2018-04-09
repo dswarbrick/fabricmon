@@ -23,7 +23,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -306,7 +305,7 @@ func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []i
 	return nodes
 }
 
-func caDiscoverFabric(ca C.umad_ca_t, outputDir string, output chan infiniband.Fabric) {
+func caDiscoverFabric(ca C.umad_ca_t, output chan infiniband.Fabric) {
 	hostname, _ := os.Hostname()
 	caName := C.GoString(&ca.ca_name[0])
 
@@ -342,12 +341,6 @@ func caDiscoverFabric(ca C.umad_ca_t, outputDir string, output chan infiniband.F
 		if mad_port != nil {
 			nodes := walkFabric(fabric, mad_port)
 			C.mad_rpc_close_port(mad_port)
-
-			if outputDir != "" {
-				filename := fmt.Sprintf("%s-%s-p%d.json", hostname, caName, portNum)
-
-				forcegraph.WriteD3JSON(path.Join(outputDir, filename), nodes)
-			}
 
 			if output != nil {
 				output <- infiniband.Fabric{hostname, caName, portNum, nodes}
@@ -450,19 +443,21 @@ func main() {
 		close(shutdownChan)
 	}()
 
+	// Initialize writers slice with just the d3.js ForceGraphWriter
+	writers := []writer.FMWriter{&forcegraph.ForceGraphWriter{*jsonDir}}
+
 	// First sweep.
 	for _, ca := range umad_ca_list {
-		caDiscoverFabric(ca, *jsonDir, nil)
+		caDiscoverFabric(ca, nil)
 	}
 
 	if *daemonize {
-		writers := []writer.FMWriter{}
-
 		for _, c := range conf.InfluxDB {
 			w := &influxdb.InfluxDBWriter{c}
 			writers = append(writers, w)
 		}
 
+		// FIXME: Move this outside of daemonize if-block
 		splitter := make(chan infiniband.Fabric)
 		go router(splitter, writers)
 
@@ -475,7 +470,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				for _, ca := range umad_ca_list {
-					caDiscoverFabric(ca, *jsonDir, splitter)
+					caDiscoverFabric(ca, splitter)
 				}
 			case <-shutdownChan:
 				log.Println("Shutdown received in polling loop.")
