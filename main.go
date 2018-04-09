@@ -109,22 +109,6 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	return counters, nil
 }
 
-func umadGetCANames() []string {
-	var (
-		buf  [C.UMAD_CA_NAME_LEN][C.UMAD_MAX_DEVICES]byte
-		hcas = make([]string, 0, C.UMAD_MAX_DEVICES)
-	)
-
-	// Call umad_get_cas_names with pointer to first element in our buffer
-	numHCAs := C.umad_get_cas_names((*[C.UMAD_CA_NAME_LEN]C.char)(unsafe.Pointer(&buf[0])), C.UMAD_MAX_DEVICES)
-
-	for x := 0; x < int(numHCAs); x++ {
-		hcas = append(hcas, strings.TrimRight(string(buf[x][:]), "\x00"))
-	}
-
-	return hcas
-}
-
 func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []infiniband.Port {
 	var portid C.ib_portid_t
 
@@ -329,7 +313,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	caNames := umadGetCANames()
+	caNames := infiniband.UmadGetCANames()
 
 	if len(caNames) == 0 {
 		fmt.Println("No HCAs found in system. Exiting.")

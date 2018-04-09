@@ -2,11 +2,10 @@
 // Use of this source code is governed by a GPL license that can be found in the LICENSE file.
 
 // Functions analogous to libibumad.
-// Note: Fabricmon cannot currently be run in an ibsim environment. The libumad2sim.so LD_PRELOAD
-// hijacks libc functions such as scandir(3), which libibumad uses to enumerate HCAs found in
-// sysfs. Other libc functions like ioctl(2) and basic file IO functions (e.g., open(2), read(2)
-// etc.) are also hijacked to intercept operations on /dev/infiniband/* and /sys/class/infiniband/*
-// entries.
+// Note: When running in an ibsim environment, the libumad2sim.so LD_PRELOAD hijacks libc syscall
+// wrappers such as scandir(3), which libibumad uses to enumerate HCAs found in sysfs. Other libc
+// functions like ioctl(2) and basic file IO functions (e.g., open(2), read(2) etc.) are also
+// hijacked to intercept operations on /dev/infiniband/* and /sys/class/infiniband/* entries.
 //
 // Go's ioutil.ReadDir() function results in a function call chain of:
 //   os.Open -> os.OpenFile -> syscall.Open -> syscall.openat -> syscall.Syscall6(SYS_OPENAT, ...)
@@ -14,8 +13,14 @@
 
 package infiniband
 
+// #cgo CFLAGS: -I/usr/include/infiniband
+// #cgo LDFLAGS: -libmad -libumad
+// #include <umad.h>
+import "C"
+
 import (
 	"io/ioutil"
+	"strings"
 )
 
 const (
@@ -35,4 +40,23 @@ func GetCANames() ([]string, error) {
 	}
 
 	return caNames, nil
+}
+
+// UmadGetCANames returns a slice of CA names, as retrieved by libibumad. This function must be
+// used when running FabricMon under ibsim, since the libumad2sim.so does not intercept Go's use
+// of the openat() syscall.
+func UmadGetCANames() []string {
+	var (
+		buf  [C.UMAD_CA_NAME_LEN][C.UMAD_MAX_DEVICES]byte
+		hcas = make([]string, 0, C.UMAD_MAX_DEVICES)
+	)
+
+	// Call umad_get_cas_names with pointer to first element in our buffer
+	numHCAs := C.umad_get_cas_names((*[C.UMAD_CA_NAME_LEN]C.char)(unsafe.Pointer(&buf[0])), C.UMAD_MAX_DEVICES)
+
+	for x := 0; x < int(numHCAs); x++ {
+		hcas = append(hcas, strings.TrimRight(string(buf[x][:]), "\x00"))
+	}
+
+	return hcas
 }

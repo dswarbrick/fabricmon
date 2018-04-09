@@ -4,7 +4,7 @@
 package infiniband
 
 // #cgo CFLAGS: -I/usr/include/infiniband
-// #include <ibnetdisc.h>
+// #include <mad.h>
 import "C"
 
 type Fabric struct {

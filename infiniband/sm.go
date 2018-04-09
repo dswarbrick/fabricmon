@@ -7,8 +7,8 @@ package infiniband
 
 // #cgo CFLAGS: -I/usr/include/infiniband
 // #cgo LDFLAGS: -libmad -libumad
+// #include <mad.h>
 // #include <umad.h>
-// #include <ibnetdisc.h>
 import "C"
 
 import (
