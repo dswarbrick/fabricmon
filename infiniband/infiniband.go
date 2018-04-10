@@ -1,11 +1,17 @@
 // Copyright 2017-18 Daniel Swarbrick. All rights reserved.
 // Use of this source code is governed by a GPL license that can be found in the LICENSE file.
+//
+// TODO: Implement user-friendly display of link rate (see ib_types.h).
 
 package infiniband
 
 // #cgo CFLAGS: -I/usr/include/infiniband
 // #include <mad.h>
 import "C"
+
+import (
+	"fmt"
+)
 
 type Fabric struct {
 	Hostname   string
@@ -85,4 +91,50 @@ var portPhysStates = [...]string{
 	"LinkUp",
 	"LinkErrorRecovery",
 	"Phy Test",
+}
+
+func LinkSpeedToStr(speed uint) string {
+	switch speed {
+	case 0:
+		return "Extended speed"
+	case 1:
+		return "2.5 Gbps"
+	case 2:
+		return "5.0 Gbps"
+	case 4:
+		return "10.0 Gbps"
+	default:
+		return fmt.Sprintf("undefined (%d)", speed)
+	}
+}
+
+func LinkWidthToStr(width uint) string {
+	switch width {
+	case 1:
+		return "1X"
+	case 2:
+		return "4X"
+	case 4:
+		return "8X"
+	case 8:
+		return "12X"
+	default:
+		return fmt.Sprintf("undefined (%d)", width)
+	}
+}
+
+func PortStateToStr(state uint) string {
+	if state < uint(len(portStates)) {
+		return portStates[state]
+	}
+
+	return fmt.Sprintf("undefined (%d)", state)
+}
+
+func PortPhysStateToStr(state uint) string {
+	if state < uint(len(portPhysStates)) {
+		return portPhysStates[state]
+	}
+
+	return fmt.Sprintf("undefined (%d)", state)
 }

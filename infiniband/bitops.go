@@ -28,7 +28,7 @@ func init() {
 // This is useful for finding the highest bit enum shared by two values. If x and y do not share
 // any common bits, the result is zero.
 func MaxPow2Divisor(x, y uint) uint {
-	if x & y == 0 {
+	if x&y == 0 {
 		return 0
 	}
 
