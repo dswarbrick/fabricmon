@@ -151,14 +151,21 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []infini
 		portState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_STATE_F)
 		physState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_PHYS_STATE_F)
 
-		// TODO: Decode EXT_PORT_LINK_SPEED (i.e., FDR).
+		// C14-24.2.1 states that a down port allows for invalid data to be returned for all
+		// PortInfo components except PortState and PortPhysicalState.
+		if portState == C.IB_LINK_DOWN {
+			ports[portNum] = myPort
+			continue
+		}
+
+		// TODO: Decode EXT_PORT_LINK_SPEED (i.e., FDR, FDR10, EDR).
 		linkWidth := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_ACTIVE_F)
 		linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
 
 		log.Printf("Port %d, port state: %s, phys state: %s, link width: %s, link speed: %s\n",
 			portNum,
 			infiniband.PortStateToStr(uint(portState)),
-			infiniband.PortStateToStr(uint(physState)),
+			infiniband.PortPhysStateToStr(uint(physState)),
 			infiniband.LinkWidthToStr(uint(linkWidth)),
 			infiniband.LinkSpeedToStr(uint(linkSpeed)))
 

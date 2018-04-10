@@ -74,6 +74,7 @@ var ExtCounterMap = map[uint32]Counter{
 	C.IB_PC_EXT_RCV_MPKTS_F: {"PortMulticastRcvPkts", 0xffffffffffffffff, 0x80},
 }
 
+// cf. PortInfo, table 155
 var portStates = [...]string{
 	"No state change", // Valid only on Set() port state
 	"Down",            // Includes failed links
@@ -82,6 +83,7 @@ var portStates = [...]string{
 	"Active",
 }
 
+// cf. PortInfo, table 155
 var portPhysStates = [...]string{
 	"No state change", // Valid only on Set() port state
 	"Sleep",
@@ -93,6 +95,7 @@ var portPhysStates = [...]string{
 	"Phy Test",
 }
 
+// cf. PortInfo, table 155
 func LinkSpeedToStr(speed uint) string {
 	switch speed {
 	case 0:
@@ -108,6 +111,7 @@ func LinkSpeedToStr(speed uint) string {
 	}
 }
 
+// cf. PortInfo, table 155
 func LinkWidthToStr(width uint) string {
 	switch width {
 	case 1:
