@@ -68,7 +68,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 
 	// Keep capMask in network byte order for easier bitwise operations with capabilities contants.
 	capMask := infiniband.Htons(uint16(C.mad_get_field(unsafe.Pointer(&buf), 0, C.IB_CPI_CAPMASK_F)))
-	log.Printf("Port %d Cap Mask2: %#x\n", portNum, infiniband.Ntohs(capMask))
+	log.Printf("Port %d Cap Mask: %#x\n", portNum, infiniband.Ntohs(capMask))
 
 	// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and PortRcvDataSL, components
 	// that represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather
@@ -88,7 +88,8 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 
 			counters[field] = uint32(C.mad_get_field(unsafe.Pointer(&buf), 0, field))
 
-			if float64(counters[field].(uint32)) > (float64(counter.Limit) * 0.000000000001) {
+			// FIXME: Honour the counter_reset_threshold value in config
+			if float64(counters[field].(uint32)) > (float64(counter.Limit) * 0.01) {
 				selMask |= counter.Select
 			}
 		}
@@ -96,7 +97,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 		if selMask > 0 {
 			var pc [1024]byte
 
-			log.Printf("WARNING: Counter select mask: %#x\n", selMask)
+			log.Printf("NOTICE: Resetting counters - mask: %#x\n", selMask)
 			if C.performance_reset_via(unsafe.Pointer(&pc), portId, C.int(portNum), C.uint(selMask), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, ibmadPort) == nil {
 				log.Println("ERROR: performance_reset_via failed")
 			}
