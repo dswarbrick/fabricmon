@@ -3,7 +3,7 @@
 
 // Low-level bit operations.
 
-package main
+package infiniband
 
 import (
 	"encoding/binary"
@@ -24,13 +24,17 @@ func init() {
 	}
 }
 
-func log2b(x uint) uint {
-	// FIXME: This can wrap if bits.Len() returns zero
-	return uint(bits.Len(x) - 1)
+// Fls finds the last (most significant) bit set.
+// Note: Fls(0) = 0, Fls(1) = 1, Fls(0x80000000) = 32, i.e., bits are numbered from one upwards.
+func Fls(x uint) uint {
+	if x == 0 {
+		return 0
+	}
+	return uint(bits.Len(x))
 }
 
 // htons converts a uint16 from host byte order to network byte order
-func htons(x uint16) uint16 {
+func Htons(x uint16) uint16 {
 	if nativeEndian != binary.BigEndian {
 		return bits.ReverseBytes16(x)
 	}
@@ -38,7 +42,7 @@ func htons(x uint16) uint16 {
 }
 
 // ntohs converts a uint16 from network byte order to host byte order
-func ntohs(x uint16) uint16 {
+func Ntohs(x uint16) uint16 {
 	if nativeEndian != binary.BigEndian {
 		return bits.ReverseBytes16(x)
 	}
@@ -46,7 +50,7 @@ func ntohs(x uint16) uint16 {
 }
 
 // ntohll converts a uint32 from network byte order to host byte order
-func ntohl(x uint32) uint32 {
+func Ntohl(x uint32) uint32 {
 	if nativeEndian != binary.BigEndian {
 		return bits.ReverseBytes32(x)
 	}
@@ -54,7 +58,7 @@ func ntohl(x uint32) uint32 {
 }
 
 // ntohll converts a uint64 from network byte order to host byte order
-func ntohll(x uint64) uint64 {
+func Ntohll(x uint64) uint64 {
 	if nativeEndian != binary.BigEndian {
 		return bits.ReverseBytes64(x)
 	}

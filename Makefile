@@ -23,7 +23,7 @@ clean:
 	@go clean && rm -f $(BINARY_NAME)
 
 test:
-	@go test -v .
+	@go test -v ./...
 
 install:
 	@go install $(LDFLAGS)
@@ -32,7 +32,7 @@ fmt:
 	@go fmt ./...
 
 check: fmt
-	@go vet
+	@go vet ./...
 
 run:
 	@go run $(LDFLAGS) $(filter-out *_test.go, $(wildcard *.go))

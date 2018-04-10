@@ -68,8 +68,9 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 		return counters, fmt.Errorf("ERROR: Port %d CLASS_PORT_INFO query failed!", portNum)
 	}
 
-	capMask := htons(uint16(C.mad_get_field(unsafe.Pointer(&buf), 0, C.IB_CPI_CAPMASK_F)))
-	log.Printf("Port %d Cap Mask2: %#x\n", portNum, ntohs(capMask))
+	// Keep capMask in network byte order for easier bitwise operations with capabilities contants.
+	capMask := infiniband.Htons(uint16(C.mad_get_field(unsafe.Pointer(&buf), 0, C.IB_CPI_CAPMASK_F)))
+	log.Printf("Port %d Cap Mask2: %#x\n", portNum, infiniband.Ntohs(capMask))
 
 	// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and PortRcvDataSL, components
 	// that represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather
@@ -172,18 +173,18 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []infini
 			// Port counters will only be fetched if port is ACTIVE + LINKUP
 			if (portState == C.IB_LINK_ACTIVE) && (physState == C.IB_PORT_PHYS_STATE_LINKUP) {
 				// Determine max width supported by both ends
-				maxWidth := uint(1 << log2b(uint(
+				maxWidth := uint(1 << (infiniband.Fls(uint(
 					C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)&
-						C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F))))
+						C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F))) - 1))
 				if uint(linkWidth) != maxWidth {
 					log.Printf("NOTICE: Port %d link width is not the max width supported by both ports",
 						portNum)
 				}
 
 				// Determine max speed supported by both ends
-				maxSpeed := uint(1 << log2b(uint(
+				maxSpeed := uint(1 << (infiniband.Fls(uint(
 					C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)&
-						C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F))))
+						C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F))) - 1))
 				if uint(linkSpeed) != maxSpeed {
 					log.Printf("NOTICE: Port %d link speed is not the max speed supported by both ports",
 						portNum)
@@ -353,7 +354,7 @@ func main() {
 			"node GUID: %#016x, system GUID: %#016x\n",
 			C.GoString(&ca.ca_name[0]), C.GoString(&ca.ca_type[0]), ca.numports,
 			C.GoString(&ca.fw_ver[0]), C.GoString(&ca.hw_ver[0]),
-			ntohll(uint64(ca.node_guid)), ntohll(uint64(ca.system_guid)))
+			infiniband.Ntohll(uint64(ca.node_guid)), infiniband.Ntohll(uint64(ca.system_guid)))
 
 		umad_ca_list[i] = ca
 	}
