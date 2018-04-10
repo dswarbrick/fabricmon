@@ -24,13 +24,11 @@ func init() {
 	}
 }
 
-// Fls finds the last (most significant) bit set.
-// Note: Fls(0) = 0, Fls(1) = 1, Fls(0x80000000) = 32, i.e., bits are numbered from one upwards.
-func Fls(x uint) uint {
-	if x == 0 {
-		return 0
-	}
-	return uint(bits.Len(x))
+// MaxPow2Divisor calculates the highest power of two divisor shared by two non-negative integers.
+// This is useful for finding the highest bit enum shared by two values. If x and y do not share
+// any common bits, the result is zero.
+func MaxPow2Divisor(x, y uint) uint {
+	return 1 << uint(bits.Len(x&y)-1)
 }
 
 // htons converts a uint16 from host byte order to network byte order

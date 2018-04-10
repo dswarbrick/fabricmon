@@ -9,15 +9,16 @@ import (
 	"testing"
 )
 
-var (
-	flsTest   = [...]uint{0, 1, 0x80000000}
-	flsResult = [...]uint{0, 1, 32}
-)
+func TestMaxPow2Divisor(t *testing.T) {
+	if MaxPow2Divisor(4+2+1, 2+1) != 2 {
+		t.Fail()
+	}
 
-func TestFls(t *testing.T) {
-	for i, x := range flsTest {
-		if Fls(x) != flsResult[i] {
-			t.Fatalf("Fls(%d) != %d", Fls(x), flsResult[i])
-		}
+	if MaxPow2Divisor(8, 4+2+1) != 0 {
+		t.Fail()
+	}
+
+	if MaxPow2Divisor(8+4+1, 2+1) != 1 {
+		t.Fail()
 	}
 }

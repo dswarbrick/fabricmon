@@ -173,18 +173,20 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []infini
 			// Port counters will only be fetched if port is ACTIVE + LINKUP
 			if (portState == C.IB_LINK_ACTIVE) && (physState == C.IB_PORT_PHYS_STATE_LINKUP) {
 				// Determine max width supported by both ends
-				maxWidth := uint(1 << (infiniband.Fls(uint(
-					C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)&
-						C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F))) - 1))
+				maxWidth := infiniband.MaxPow2Divisor(
+					uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)),
+					uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)))
+
 				if uint(linkWidth) != maxWidth {
 					log.Printf("NOTICE: Port %d link width is not the max width supported by both ports",
 						portNum)
 				}
 
 				// Determine max speed supported by both ends
-				maxSpeed := uint(1 << (infiniband.Fls(uint(
-					C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)&
-						C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F))) - 1))
+				maxSpeed := infiniband.MaxPow2Divisor(
+					uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)),
+					uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)))
+
 				if uint(linkSpeed) != maxSpeed {
 					log.Printf("NOTICE: Port %d link speed is not the max speed supported by both ports",
 						portNum)
