@@ -69,8 +69,10 @@ func main() {
 	}
 
 	// Initialise umad library (also required in order to run under ibsim).
-	// FIXME: Check error status of this.
-	infiniband.UmadInit()
+	if infiniband.UmadInit() < 0 {
+		fmt.Println("Error initialising umad library. Exiting.")
+		os.Exit(1)
+	}
 
 	caNames := infiniband.UmadGetCANames()
 

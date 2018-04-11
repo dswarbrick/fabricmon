@@ -13,7 +13,6 @@ import "C"
 import (
 	"fmt"
 	"log"
-	"os"
 	"unsafe"
 )
 
@@ -190,20 +189,19 @@ func Sweep(c chan Fabric) {
 	}
 }
 
-func UmadInit() {
-	// Initialise umad library (also required in order to run under ibsim)
-	// NOTE: ibsim indicates that FabricMon is not "disconnecting" when it exits - resource leak?
-	if C.umad_init() < 0 {
-		fmt.Println("Error initialising umad library. Exiting.")
-		os.Exit(1)
-	}
+// UmadInit simply wraps the libibumad umad_init() function.
+func UmadInit() int {
+	return int(C.umad_init())
 }
 
 func UmadDone() {
 	// Free associated memory from pointers in umad_ca_t.ports
 	for _, ca := range umad_ca_list {
-		C.umad_release_ca(&ca)
+		if C.umad_release_ca(&ca) < 0 {
+			log.Printf("ERROR: umad_release_ca %#v\n", ca)
+		}
 	}
 
+	// NOTE: ibsim indicates that FabricMon is not "disconnecting" when it exits - resource leak?
 	C.umad_done()
 }
