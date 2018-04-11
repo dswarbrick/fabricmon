@@ -7,10 +7,15 @@ package infiniband
 
 // #cgo CFLAGS: -I/usr/include/infiniband
 // #include <mad.h>
+// #include <umad.h>
 import "C"
 
 import (
 	"fmt"
+)
+
+const (
+	PMA_TIMEOUT = 0
 )
 
 type Fabric struct {
@@ -40,6 +45,8 @@ type Counter struct {
 	Limit  uint64
 	Select uint32 // CounterSelect (bits 0-15), CounterSelect2 (bits 16-23)
 }
+
+var nnMap NodeNameMap
 
 // Standard (32-bit) counters and their display names.
 // Counter lengths and field selects defined in IBTA spec v1.3, table 247 (PortCounters).
@@ -141,4 +148,12 @@ func PortPhysStateToStr(state uint) string {
 	}
 
 	return fmt.Sprintf("undefined (%d)", state)
+}
+
+func init() {
+	nnMap, _ = NewNodeNameMap()
+}
+
+func UmadDone() {
+	C.umad_done()
 }

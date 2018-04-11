@@ -10,8 +10,6 @@
 package main
 
 // #cgo CFLAGS: -I/usr/include/infiniband
-// #cgo LDFLAGS: -libmad -libumad -libnetdisc
-// #include <stdlib.h>
 // #include <umad.h>
 // #include <ibnetdisc.h>
 import "C"
@@ -37,10 +35,6 @@ import (
 	"github.com/dswarbrick/fabricmon/writer/influxdb"
 )
 
-const (
-	PMA_TIMEOUT = 0
-)
-
 type Fabric struct {
 	mutex      sync.RWMutex
 	ibndFabric *C.struct_ibnd_fabric
@@ -50,248 +44,6 @@ type Fabric struct {
 
 // FabricMap is a two-dimensional map holding the Fabric struct for each HCA / port pair.
 type FabricMap map[string]map[int]*Fabric
-
-var nnMap infiniband.NodeNameMap
-
-// getPortCounters retrieves all counters for a specific port.
-func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibmad_port) (map[uint32]interface{}, error) {
-	var buf [1024]byte
-
-	counters := make(map[uint32]interface{})
-
-	// PerfMgt ClassPortInfo is a required attribute
-	pmaBuf := C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.CLASS_PORT_INFO, ibmadPort)
-
-	if pmaBuf == nil {
-		return counters, fmt.Errorf("ERROR: Port %d CLASS_PORT_INFO query failed!", portNum)
-	}
-
-	// Keep capMask in network byte order for easier bitwise operations with capabilities contants.
-	capMask := infiniband.Htons(uint16(C.mad_get_field(unsafe.Pointer(&buf), 0, C.IB_CPI_CAPMASK_F)))
-	log.Printf("Port %d Cap Mask: %#x\n", portNum, infiniband.Ntohs(capMask))
-
-	// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and PortRcvDataSL, components
-	// that represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather
-	// than just octets.
-
-	// Fetch standard (32 bit (or less)) counters
-	pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, ibmadPort)
-
-	if pmaBuf != nil {
-		var selMask uint32
-
-		// Iterate over standard counters
-		for field, counter := range infiniband.StdCounterMap {
-			if (field == C.IB_PC_XMT_WAIT_F) && (capMask&C.IB_PM_PC_XMIT_WAIT_SUP == 0) {
-				continue // Counter not supported
-			}
-
-			counters[field] = uint32(C.mad_get_field(unsafe.Pointer(&buf), 0, field))
-
-			// FIXME: Honour the counter_reset_threshold value in config
-			if float64(counters[field].(uint32)) > (float64(counter.Limit) * 0.01) {
-				selMask |= counter.Select
-			}
-		}
-
-		if selMask > 0 {
-			var pc [1024]byte
-
-			log.Printf("NOTICE: Resetting counters - mask: %#x\n", selMask)
-			if C.performance_reset_via(unsafe.Pointer(&pc), portId, C.int(portNum), C.uint(selMask), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, ibmadPort) == nil {
-				log.Println("ERROR: performance_reset_via failed")
-			}
-		}
-	}
-
-	if (capMask&C.IB_PM_EXT_WIDTH_SUPPORTED == 0) && (capMask&C.IB_PM_EXT_WIDTH_NOIETF_SUP == 0) {
-		// TODO: Fetch standard data / packet counters if extended counters are not supported
-		// (pre-QDR hardware).
-		log.Printf("NOTICE: Port %d does not support extended counters", portNum)
-		return counters, nil
-	}
-
-	// Fetch extended (64 bit) counters
-	pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS_EXT, ibmadPort)
-
-	if pmaBuf != nil {
-		for field, _ := range infiniband.ExtCounterMap {
-			counters[field] = uint64(C.mad_get_field64(unsafe.Pointer(&buf), 0, field))
-		}
-	}
-
-	return counters, nil
-}
-
-func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []infiniband.Port {
-	var portid C.ib_portid_t
-
-	log.Printf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x\n",
-		node._type, nnMap.RemapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
-		node.numports, node.guid)
-
-	ports := make([]infiniband.Port, node.numports+1)
-
-	C.ib_portid_set(&portid, C.int(node.smalid), 0, 0)
-
-	// node.ports is an array of ports, indexed by port number:
-	//   ports[1] == port 1,
-	//   ports[2] == port 2,
-	//   etc...
-	// Any port in the array MAY BE NIL! Most notably, non-switches have no port zero, therefore
-	// ports[0] == nil for those nodes!
-	arrayPtr := uintptr(unsafe.Pointer(node.ports))
-
-	for portNum := 0; portNum <= int(node.numports); portNum++ {
-		// Get pointer to port struct and increment arrayPtr to next pointer.
-		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))
-		arrayPtr += unsafe.Sizeof(arrayPtr)
-
-		myPort := infiniband.Port{GUID: uint64(pp.guid)}
-
-		portState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_STATE_F)
-		physState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_PHYS_STATE_F)
-
-		// C14-24.2.1 states that a down port allows for invalid data to be returned for all
-		// PortInfo components except PortState and PortPhysicalState.
-		if portState == C.IB_LINK_DOWN {
-			ports[portNum] = myPort
-			continue
-		}
-
-		// TODO: Decode EXT_PORT_LINK_SPEED (i.e., FDR, FDR10, EDR).
-		linkWidth := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_ACTIVE_F)
-		linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
-
-		log.Printf("Port %d, port state: %s, phys state: %s, link width: %s, link speed: %s\n",
-			portNum,
-			infiniband.PortStateToStr(uint(portState)),
-			infiniband.PortPhysStateToStr(uint(physState)),
-			infiniband.LinkWidthToStr(uint(linkWidth)),
-			infiniband.LinkSpeedToStr(uint(linkSpeed)))
-
-		// Remote port may be nil if port state is polling / armed.
-		rp := pp.remoteport
-
-		if rp != nil {
-			log.Printf("Remote node type: %d, GUID: %#016x, descr: %s\n",
-				rp.node._type, rp.node.guid,
-				nnMap.RemapNodeName(uint64(rp.node.guid), C.GoString(&rp.node.nodedesc[0])))
-
-			myPort.RemoteGUID = uint64(rp.node.guid)
-
-			// Port counters will only be fetched if port is ACTIVE + LINKUP
-			if (portState == C.IB_LINK_ACTIVE) && (physState == C.IB_PORT_PHYS_STATE_LINKUP) {
-				// Determine max width supported by both ends
-				maxWidth := infiniband.MaxPow2Divisor(
-					uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)),
-					uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)))
-
-				if uint(linkWidth) != maxWidth {
-					log.Printf("NOTICE: Port %d link width is not the max width supported by both ports",
-						portNum)
-				}
-
-				// Determine max speed supported by both ends
-				maxSpeed := infiniband.MaxPow2Divisor(
-					uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)),
-					uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)))
-
-				if uint(linkSpeed) != maxSpeed {
-					log.Printf("NOTICE: Port %d link speed is not the max speed supported by both ports",
-						portNum)
-				}
-
-				if counters, err := getPortCounters(&portid, portNum, mad_port); err == nil {
-					myPort.Counters = counters
-				} else {
-					log.Printf("ERROR: Cannot get counters for port %d: %s\n", portNum, err)
-				}
-			}
-		}
-
-		ports[portNum] = myPort
-	}
-
-	return ports
-}
-
-func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []infiniband.Node {
-	nodes := make([]infiniband.Node, 0)
-
-	for node := fabric.nodes; node != nil; node = node.next {
-		myNode := infiniband.Node{
-			GUID:     uint64(node.guid),
-			NodeType: int(node._type),
-			NodeDesc: C.GoString(&node.nodedesc[0]),
-			VendorID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_VENDORID_F)),
-			DeviceID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_DEVID_F)),
-		}
-
-		log.Printf("node: %#v\n", myNode)
-
-		if node._type == C.IB_NODE_SWITCH {
-			myNode.Ports = walkPorts(node, mad_port)
-		}
-
-		nodes = append(nodes, myNode)
-	}
-
-	return nodes
-}
-
-func caDiscoverFabric(ca C.umad_ca_t, output chan infiniband.Fabric) {
-	hostname, _ := os.Hostname()
-	caName := C.GoString(&ca.ca_name[0])
-
-	mgmt_classes := [3]C.int{C.IB_SMI_CLASS, C.IB_SA_CLASS, C.IB_PERFORMANCE_CLASS}
-
-	// Iterate over CA's umad_port array
-	for _, umad_port := range ca.ports {
-		// ca.ports may contain noncontiguous umad_port pointers
-		if umad_port == nil {
-			continue
-		}
-
-		portNum := int(umad_port.portnum)
-		log.Printf("Polling %s port %d", caName, portNum)
-
-		// ibnd_config_t specifies max hops, timeout, max SMPs etc
-		var config C.ibnd_config_t
-
-		// NOTE: Under ibsim, this will fail after a certain number of iterations with a
-		// mad_rpc_open_port() errors (presumably due to a resource leak in ibsim).
-		// ibnd_fabric_t *ibnd_discover_fabric(char *ca_name, int ca_port, ib_portid_t *from, ibnd_config_t *config)
-		fabric, err := C.ibnd_discover_fabric(&ca.ca_name[0], umad_port.portnum, nil, &config)
-
-		if err != nil {
-			log.Println("Unable to discover fabric:", err)
-			continue
-		}
-
-		// Open MAD port, which is needed for getting port counters.
-		// struct ibmad_port *mad_rpc_open_port(char *dev_name, int dev_port, int *mgmt_classes, int num_classes)
-		mad_port := C.mad_rpc_open_port(&ca.ca_name[0], umad_port.portnum, &mgmt_classes[0], C.int(len(mgmt_classes)))
-
-		if mad_port != nil {
-			nodes := walkFabric(fabric, mad_port)
-			C.mad_rpc_close_port(mad_port)
-
-			if output != nil {
-				output <- infiniband.Fabric{
-					Hostname:   hostname,
-					CAName:     caName,
-					SourcePort: portNum,
-					Nodes:      nodes,
-				}
-			}
-		} else {
-			log.Printf("ERROR: Unable to open MAD port: %s: %d", caName, portNum)
-		}
-
-		C.ibnd_destroy_fabric(fabric)
-	}
-}
 
 // router duplicates a Fabric struct received via channel and outputs it to multiple receiver
 // channels.
@@ -349,8 +101,6 @@ func main() {
 
 	log.Println("FabricMon", version.Info())
 
-	nnMap, _ = infiniband.NewNodeNameMap()
-
 	// umad_ca_t contains an array of pointers - associated memory must be freed with
 	// umad_release_ca(umad_ca_t *ca)
 	umad_ca_list := make([]C.umad_ca_t, len(caNames))
@@ -388,7 +138,7 @@ func main() {
 
 	// First sweep.
 	for _, ca := range umad_ca_list {
-		caDiscoverFabric(ca, nil)
+		infiniband.CADiscoverFabric(ca, nil)
 	}
 
 	if *daemonize {
@@ -410,7 +160,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				for _, ca := range umad_ca_list {
-					caDiscoverFabric(ca, splitter)
+					infiniband.CADiscoverFabric(ca, splitter)
 				}
 			case <-shutdownChan:
 				log.Println("Shutdown received in polling loop.")
@@ -428,7 +178,7 @@ func main() {
 		C.umad_release_ca(&ca)
 	}
 
-	C.umad_done()
+	infiniband.UmadDone()
 
 	// TODO: Re-enable these
 	// Start HTTP server to serve JSON for d3.js (WIP)
