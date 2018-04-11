@@ -47,7 +47,7 @@ type Counter struct {
 }
 
 var (
-	nnMap        NodeNameMap
+	nnMap NodeNameMap
 )
 
 // Standard (32-bit) counters and their display names.
@@ -154,15 +154,4 @@ func PortPhysStateToStr(state uint) string {
 
 func init() {
 	nnMap, _ = NewNodeNameMap()
-}
-
-// UmadInit simply wraps the libibumad umad_init() function.
-func UmadInit() int {
-	return int(C.umad_init())
-}
-
-// UmadDone simply wraps the libibumad umad_done() function.
-func UmadDone() {
-	// NOTE: ibsim indicates that FabricMon is not "disconnecting" when it exits - resource leak?
-	C.umad_done()
 }

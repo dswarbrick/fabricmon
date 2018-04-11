@@ -12,11 +12,12 @@ import "C"
 import (
 	"log"
 	"os"
+	"time"
 	"unsafe"
 )
 
 type HCA struct {
-	Name        string
+	Name string
 
 	// umad_ca_t contains an array of pointers - associated memory must be freed with
 	// umad_release_ca(umad_ca_t *ca)
@@ -24,13 +25,18 @@ type HCA struct {
 }
 
 func (h *HCA) NetDiscover(output chan Fabric) {
-	hostname, _ := os.Hostname()
+	var (
+		totalNodes, totalPorts int
+	)
 
 	mgmt_classes := [3]C.int{C.IB_SMI_CLASS, C.IB_SA_CLASS, C.IB_PERFORMANCE_CLASS}
 
+	hostname, _ := os.Hostname()
+	start := time.Now()
+
 	// Iterate over CA's umad_port array
 	for _, umad_port := range h.umad_ca.ports {
-		// ca.ports may contain noncontiguous umad_port pointers
+		// umad_ca.ports may contain noncontiguous umad_port pointers
 		if umad_port == nil {
 			continue
 		}
@@ -59,6 +65,12 @@ func (h *HCA) NetDiscover(output chan Fabric) {
 			nodes := walkFabric(fabric, mad_port)
 			C.mad_rpc_close_port(mad_port)
 
+			totalNodes += len(nodes)
+
+			for _, n := range nodes {
+				totalPorts += len(n.Ports)
+			}
+
 			if output != nil {
 				output <- Fabric{
 					Hostname:   hostname,
@@ -73,6 +85,9 @@ func (h *HCA) NetDiscover(output chan Fabric) {
 
 		C.ibnd_destroy_fabric(fabric)
 	}
+
+	log.Printf("NetDiscover completed in %v; %d nodes, %d ports\n",
+		time.Since(start), totalNodes, totalPorts)
 }
 
 func (h *HCA) Release() {
@@ -100,8 +115,8 @@ func GetCAs() []HCA {
 			ntohll(uint64(ca.node_guid)), ntohll(uint64(ca.system_guid)))
 
 		hcas[i] = HCA{
-			Name:        caName,
-			umad_ca:     &ca,
+			Name:    caName,
+			umad_ca: &ca,
 		}
 	}
 

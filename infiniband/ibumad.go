@@ -28,8 +28,19 @@ const (
 	SYS_INFINIBAND = "/sys/class/infiniband"
 )
 
+// UmadInit simply wraps the libibumad umad_init() function.
+func UmadInit() int {
+	return int(C.umad_init())
+}
+
+// UmadDone simply wraps the libibumad umad_done() function.
+func UmadDone() {
+	// NOTE: ibsim indicates that FabricMon is not "disconnecting" when it exits - resource leak?
+	C.umad_done()
+}
+
 // getCANames is the functional equivalent of umad_get_cas_names()
-func GetCANames() ([]string, error) {
+func getCANames() ([]string, error) {
 	files, err := ioutil.ReadDir(SYS_INFINIBAND)
 	if err != nil {
 		return nil, err
