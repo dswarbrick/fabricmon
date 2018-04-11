@@ -46,7 +46,7 @@ func GetCANames() ([]string, error) {
 // UmadGetCANames returns a slice of CA names, as retrieved by libibumad. This function must be
 // used when running FabricMon under ibsim, since the libumad2sim.so does not intercept Go's use
 // of the openat() syscall.
-func UmadGetCANames() []string {
+func umadGetCANames() []string {
 	var (
 		buf  [C.UMAD_CA_NAME_LEN][C.UMAD_MAX_DEVICES]byte
 		hcas = make([]string, 0, C.UMAD_MAX_DEVICES)

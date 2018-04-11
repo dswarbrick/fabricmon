@@ -74,16 +74,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	caNames := infiniband.UmadGetCANames()
+	hcas := infiniband.GetCAs()
 
-	if len(caNames) == 0 {
+	if len(hcas) == 0 {
 		fmt.Println("No HCAs found in system. Exiting.")
 		os.Exit(1)
 	}
 
 	log.Println("FabricMon", version.Info())
-
-	infiniband.ScanCAs(caNames)
 
 	// Channel to signal goroutines that we are shutting down.
 	shutdownChan := make(chan bool)
@@ -101,7 +99,9 @@ func main() {
 	writers := []writer.FMWriter{&forcegraph.ForceGraphWriter{OutputDir: *jsonDir}}
 
 	// First sweep.
-	infiniband.Sweep(nil)
+	for _, hca := range hcas {
+		hca.NetDiscover(nil)
+	}
 
 	if *daemonize {
 		for _, c := range conf.InfluxDB {
@@ -121,7 +121,9 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
-				infiniband.Sweep(splitter)
+				for _, hca := range hcas {
+					hca.NetDiscover(splitter)
+				}
 			case <-shutdownChan:
 				log.Println("Shutdown received in polling loop.")
 				break Loop
@@ -132,6 +134,10 @@ func main() {
 	}
 
 	log.Println("Cleaning up")
+
+	for _, hca := range hcas {
+		hca.Release()
+	}
 
 	infiniband.UmadDone()
 }
