@@ -8,11 +8,11 @@ package influxdb
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
 	"github.com/influxdata/influxdb/client/v2"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/dswarbrick/fabricmon/config"
 	"github.com/dswarbrick/fabricmon/infiniband"

@@ -10,10 +10,12 @@ package infiniband
 import "C"
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"time"
 	"unsafe"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type HCA struct {
@@ -42,7 +44,7 @@ func (h *HCA) NetDiscover(output chan Fabric) {
 		}
 
 		portNum := int(umad_port.portnum)
-		log.Printf("Polling %s port %d", h.Name, portNum)
+		log.WithFields(log.Fields{"ca": h.Name, "port": portNum}).Debug("Polling port")
 
 		// ibnd_config_t specifies max hops, timeout, max SMPs etc
 		var config C.ibnd_config_t
@@ -53,7 +55,7 @@ func (h *HCA) NetDiscover(output chan Fabric) {
 		fabric, err := C.ibnd_discover_fabric(&h.umad_ca.ca_name[0], umad_port.portnum, nil, &config)
 
 		if err != nil {
-			log.Println("Unable to discover fabric:", err)
+			log.Error("Unable to discover fabric: ", err)
 			continue
 		}
 
@@ -80,20 +82,21 @@ func (h *HCA) NetDiscover(output chan Fabric) {
 				}
 			}
 		} else {
-			log.Printf("ERROR: Unable to open MAD port: %s: %d", h.Name, portNum)
+			log.WithFields(log.Fields{"ca": h.Name, "port": portNum}).
+				Error("Unable to open MAD port")
 		}
 
 		C.ibnd_destroy_fabric(fabric)
 	}
 
-	log.Printf("NetDiscover completed in %v; %d nodes, %d ports\n",
-		time.Since(start), totalNodes, totalPorts)
+	log.WithFields(log.Fields{"time": time.Since(start), "nodes": totalNodes, "ports": totalPorts}).
+		Info("NetDiscover completed")
 }
 
 func (h *HCA) Release() {
 	// Free associated memory from pointers in umad_ca_t.ports
 	if C.umad_release_ca(h.umad_ca) < 0 {
-		log.Printf("ERROR: umad_release_ca %#v\n", h.umad_ca)
+		log.Error("umad_release_ca: ", h.umad_ca)
 	}
 }
 
@@ -108,11 +111,15 @@ func GetCAs() []HCA {
 		C.umad_get_ca(ca_name, &ca)
 		C.free(unsafe.Pointer(ca_name))
 
-		log.Printf("Found CA %s (%s) with %d ports, firmware version: %s, hardware version: %s, "+
-			"node GUID: %#016x, system GUID: %#016x\n",
-			C.GoString(&ca.ca_name[0]), C.GoString(&ca.ca_type[0]), ca.numports,
-			C.GoString(&ca.fw_ver[0]), C.GoString(&ca.hw_ver[0]),
-			ntohll(uint64(ca.node_guid)), ntohll(uint64(ca.system_guid)))
+		log.WithFields(log.Fields{
+			"ca":          C.GoString(&ca.ca_name[0]),
+			"type":        C.GoString(&ca.ca_type[0]),
+			"ports":       ca.numports,
+			"firmware":    C.GoString(&ca.fw_ver[0]),
+			"hardware":    C.GoString(&ca.hw_ver[0]),
+			"node_guid":   fmt.Sprintf("%#016x", ntohll(uint64(ca.node_guid))),
+			"system_guid": fmt.Sprintf("%#016x", ntohll(uint64(ca.system_guid))),
+		}).Info("Found HCA")
 
 		hcas[i] = HCA{
 			Name:    caName,
@@ -135,7 +142,7 @@ func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []N
 			DeviceID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_DEVID_F)),
 		}
 
-		log.Printf("node: %#v\n", myNode)
+		log.Debugf("Node: %#v", myNode)
 
 		if node._type == C.IB_NODE_SWITCH {
 			myNode.Ports = walkPorts(node, mad_port)

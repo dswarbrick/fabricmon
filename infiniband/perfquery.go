@@ -10,8 +10,9 @@ import "C"
 
 import (
 	"fmt"
-	"log"
 	"unsafe"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // getPortCounters retrieves all counters for a specific port.
@@ -29,7 +30,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 
 	// Keep capMask in network byte order for easier bitwise operations with capabilities contants.
 	capMask := htons(uint16(C.mad_get_field(unsafe.Pointer(&buf), 0, C.IB_CPI_CAPMASK_F)))
-	log.Printf("Port %d Cap Mask: %#x\n", portNum, ntohs(capMask))
+	log.Debugf("Port %d cap. mask: %#x", portNum, ntohs(capMask))
 
 	// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and PortRcvDataSL, components
 	// that represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather
@@ -58,9 +59,11 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 		if selMask > 0 {
 			var pc [1024]byte
 
-			log.Printf("NOTICE: Resetting counters - mask: %#x\n", selMask)
+			log.WithFields(log.Fields{"select_mask": fmt.Sprintf("%#x", selMask)}).
+				Warn("Resetting counters")
+
 			if C.performance_reset_via(unsafe.Pointer(&pc), portId, C.int(portNum), C.uint(selMask), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, ibmadPort) == nil {
-				log.Println("ERROR: performance_reset_via failed")
+				log.Error("performance_reset_via failed")
 			}
 		}
 	}
@@ -68,7 +71,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	if (capMask&C.IB_PM_EXT_WIDTH_SUPPORTED == 0) && (capMask&C.IB_PM_EXT_WIDTH_NOIETF_SUP == 0) {
 		// TODO: Fetch standard data / packet counters if extended counters are not supported
 		// (pre-QDR hardware).
-		log.Printf("NOTICE: Port %d does not support extended counters", portNum)
+		log.WithFields(log.Fields{"port": portNum}).Warn("Port does not support extended counters")
 		return counters, nil
 	}
 
@@ -87,7 +90,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 	var portid C.ib_portid_t
 
-	log.Printf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x\n",
+	log.Debugf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x",
 		node._type, nnMap.RemapNodeName(uint64(node.guid), C.GoString(&node.nodedesc[0])),
 		node.numports, node.guid)
 

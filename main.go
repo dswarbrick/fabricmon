@@ -11,13 +11,13 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"time"
 
 	"golang.org/x/sys/unix"
 
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/dswarbrick/fabricmon/config"
@@ -50,7 +50,7 @@ func router(input chan infiniband.Fabric, writers []writer.FMWriter) {
 		close(c)
 	}
 
-	log.Println("Router input channel closed. Exiting function.")
+	log.Debug("Router input channel closed. Exiting function.")
 }
 
 func main() {
@@ -81,7 +81,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Println("FabricMon", version.Info())
+	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
+	log.SetLevel(log.DebugLevel)
+
+	log.Info("FabricMon ", version.Info())
 
 	// Channel to signal goroutines that we are shutting down.
 	shutdownChan := make(chan bool)
@@ -91,7 +94,7 @@ func main() {
 	signal.Notify(sigChan, unix.SIGINT, unix.SIGTERM)
 	go func() {
 		s := <-sigChan
-		log.Printf("Caught signal: %s. Shutting down.", s)
+		log.WithFields(log.Fields{"signal": s}).Debug("Shutting down due to signal.")
 		close(shutdownChan)
 	}()
 
@@ -125,7 +128,7 @@ func main() {
 					hca.NetDiscover(splitter)
 				}
 			case <-shutdownChan:
-				log.Println("Shutdown received in polling loop.")
+				log.Debug("Shutdown received in polling loop.")
 				break Loop
 			}
 		}
@@ -133,7 +136,7 @@ func main() {
 		close(splitter)
 	}
 
-	log.Println("Cleaning up")
+	log.Debug("Cleaning up")
 
 	// Free associated memory from pointers in umad_ca_t.ports
 	for _, hca := range hcas {

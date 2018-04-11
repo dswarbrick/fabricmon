@@ -9,8 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"path"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/dswarbrick/fabricmon/infiniband"
 )
