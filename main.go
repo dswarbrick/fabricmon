@@ -135,6 +135,7 @@ func main() {
 
 	log.Println("Cleaning up")
 
+	// Free associated memory from pointers in umad_ca_t.ports
 	for _, hca := range hcas {
 		hca.Release()
 	}

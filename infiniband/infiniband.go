@@ -12,8 +12,6 @@ import "C"
 
 import (
 	"fmt"
-	"log"
-	"unsafe"
 )
 
 const (
@@ -158,22 +156,6 @@ func init() {
 	nnMap, _ = NewNodeNameMap()
 }
 
-func ScanCAs(caNames []string) {
-	for _, caName := range caNames {
-		var ca C.umad_ca_t
-
-		ca_name := C.CString(caName)
-		C.umad_get_ca(ca_name, &ca)
-		C.free(unsafe.Pointer(ca_name))
-
-		log.Printf("Found CA %s (%s) with %d ports, firmware version: %s, hardware version: %s, "+
-			"node GUID: %#016x, system GUID: %#016x\n",
-			C.GoString(&ca.ca_name[0]), C.GoString(&ca.ca_type[0]), ca.numports,
-			C.GoString(&ca.fw_ver[0]), C.GoString(&ca.hw_ver[0]),
-			ntohll(uint64(ca.node_guid)), ntohll(uint64(ca.system_guid)))
-	}
-}
-
 // UmadInit simply wraps the libibumad umad_init() function.
 func UmadInit() int {
 	return int(C.umad_init())
@@ -183,51 +165,4 @@ func UmadInit() int {
 func UmadDone() {
 	// NOTE: ibsim indicates that FabricMon is not "disconnecting" when it exits - resource leak?
 	C.umad_done()
-}
-
-// TESTING
-type HCA struct {
-	Name        string
-	Type        string
-	FirmwareVer string
-	HardwareVer string
-
-	// umad_ca_t contains an array of pointers - associated memory must be freed with
-	// umad_release_ca(umad_ca_t *ca)
-	umad_ca *C.umad_ca_t
-}
-
-func (h *HCA) NetDiscover(ch chan Fabric) {
-	log.Println("NetDiscover")
-	caDiscoverFabric(*h.umad_ca, ch)
-}
-
-func (h *HCA) Release() {
-	// Free associated memory from pointers in umad_ca_t.ports
-	if C.umad_release_ca(h.umad_ca) < 0 {
-		log.Printf("ERROR: umad_release_ca %#v\n", h.umad_ca)
-	}
-}
-
-func GetCAs() []HCA {
-	caNames := umadGetCANames()
-	hcas := make([]HCA, len(caNames))
-
-	for i, caName := range caNames {
-		var ca C.umad_ca_t
-
-		ca_name := C.CString(caName)
-		C.umad_get_ca(ca_name, &ca)
-		C.free(unsafe.Pointer(ca_name))
-
-		hcas[i] = HCA{
-			Name:        caName,
-			Type:        C.GoString(&ca.ca_type[0]),
-			FirmwareVer: C.GoString(&ca.fw_ver[0]),
-			HardwareVer: C.GoString(&ca.hw_ver[0]),
-			umad_ca:     &ca,
-		}
-	}
-
-	return hcas
 }
