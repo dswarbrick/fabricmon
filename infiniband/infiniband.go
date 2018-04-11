@@ -12,6 +12,9 @@ import "C"
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"unsafe"
 )
 
 const (
@@ -46,7 +49,10 @@ type Counter struct {
 	Select uint32 // CounterSelect (bits 0-15), CounterSelect2 (bits 16-23)
 }
 
-var nnMap NodeNameMap
+var (
+	nnMap        NodeNameMap
+	umad_ca_list = []C.umad_ca_t{}
+)
 
 // Standard (32-bit) counters and their display names.
 // Counter lengths and field selects defined in IBTA spec v1.3, table 247 (PortCounters).
@@ -154,6 +160,50 @@ func init() {
 	nnMap, _ = NewNodeNameMap()
 }
 
+func ScanCAs(caNames []string) {
+	// umad_ca_t contains an array of pointers - associated memory must be freed with
+	// umad_release_ca(umad_ca_t *ca)
+	umad_ca_list = make([]C.umad_ca_t, len(caNames))
+
+	for i, caName := range caNames {
+		var ca C.umad_ca_t
+
+		ca_name := C.CString(caName)
+		C.umad_get_ca(ca_name, &ca)
+		C.free(unsafe.Pointer(ca_name))
+
+		log.Printf("Found CA %s (%s) with %d ports, firmware version: %s, hardware version: %s, "+
+			"node GUID: %#016x, system GUID: %#016x\n",
+			C.GoString(&ca.ca_name[0]), C.GoString(&ca.ca_type[0]), ca.numports,
+			C.GoString(&ca.fw_ver[0]), C.GoString(&ca.hw_ver[0]),
+			Ntohll(uint64(ca.node_guid)), Ntohll(uint64(ca.system_guid)))
+
+		umad_ca_list[i] = ca
+	}
+}
+
+func Sweep(c chan Fabric) {
+	log.Println("Sweep")
+	for _, ca := range umad_ca_list {
+		log.Printf("Sweep - %#v\n", ca)
+		CADiscoverFabric(ca, c)
+	}
+}
+
+func UmadInit() {
+	// Initialise umad library (also required in order to run under ibsim)
+	// NOTE: ibsim indicates that FabricMon is not "disconnecting" when it exits - resource leak?
+	if C.umad_init() < 0 {
+		fmt.Println("Error initialising umad library. Exiting.")
+		os.Exit(1)
+	}
+}
+
 func UmadDone() {
+	// Free associated memory from pointers in umad_ca_t.ports
+	for _, ca := range umad_ca_list {
+		C.umad_release_ca(&ca)
+	}
+
 	C.umad_done()
 }
