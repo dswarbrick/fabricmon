@@ -127,7 +127,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 		linkWidth := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_ACTIVE_F)
 		linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
 
-		log.Printf("Port %d, port state: %s, phys state: %s, link width: %s, link speed: %s\n",
+		log.Debugf("Port %d, port state: %s, phys state: %s, link width: %s, link speed: %s",
 			portNum,
 			PortStateToStr(uint(portState)),
 			PortPhysStateToStr(uint(physState)),
@@ -138,7 +138,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 		rp := pp.remoteport
 
 		if rp != nil {
-			log.Printf("Remote node type: %d, GUID: %#016x, descr: %s\n",
+			log.Debugf("Remote node type: %d, GUID: %#016x, descr: %s",
 				rp.node._type, rp.node.guid,
 				nnMap.RemapNodeName(uint64(rp.node.guid), C.GoString(&rp.node.nodedesc[0])))
 
@@ -152,7 +152,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 					uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)))
 
 				if uint(linkWidth) != maxWidth {
-					log.Printf("NOTICE: Port %d link width is not the max width supported by both ports",
+					log.Warnf("Port %d link width is not the max width supported by both ports",
 						portNum)
 				}
 
@@ -162,14 +162,15 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 					uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)))
 
 				if uint(linkSpeed) != maxSpeed {
-					log.Printf("NOTICE: Port %d link speed is not the max speed supported by both ports",
+					log.Warnf("Port %d link speed is not the max speed supported by both ports",
 						portNum)
 				}
 
 				if counters, err := getPortCounters(&portid, portNum, mad_port); err == nil {
 					myPort.Counters = counters
 				} else {
-					log.Printf("ERROR: Cannot get counters for port %d: %s\n", portNum, err)
+					log.WithError(err).WithFields(log.Fields{"port": portNum}).
+						Error("Cannot get counters for port")
 				}
 			}
 		}

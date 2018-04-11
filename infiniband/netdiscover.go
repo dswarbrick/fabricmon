@@ -55,7 +55,7 @@ func (h *HCA) NetDiscover(output chan Fabric) {
 		fabric, err := C.ibnd_discover_fabric(&h.umad_ca.ca_name[0], umad_port.portnum, nil, &config)
 
 		if err != nil {
-			log.Error("Unable to discover fabric: ", err)
+			log.WithError(err).Error("Unable to discover fabric")
 			continue
 		}
 

@@ -32,12 +32,12 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 	})
 
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 		return
 	}
 
 	if rtt, version, err := c.Ping(0); err == nil {
-		log.Printf("InfluxDB (version %s) ping response: %v\n", version, rtt)
+		log.WithFields(log.Fields{"version": version, "rtt": rtt}).Infof("InfluxDB ping reply")
 	}
 
 	// TODO: Break this out to a separate, unexported method.
@@ -47,7 +47,7 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 			Precision: "s",
 		})
 		if err != nil {
-			log.Println(err)
+			log.Error(err)
 			return
 		}
 
@@ -94,14 +94,14 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 			}
 		}
 
-		log.Printf("InfluxDB batch contains %d points\n", len(batch.Points()))
+		log.Infof("InfluxDB batch contains %d points\n", len(batch.Points()))
 
 		if err := c.Write(batch); err != nil {
-			log.Print(err)
+			log.Error(err)
 		}
 	}
 
-	log.Println("InfluxDBWriter input channel closed.")
+	log.Debug("InfluxDBWriter input channel closed.")
 	c.Close()
-	log.Println("InfluxDBWriter out.")
+	log.Debug("InfluxDBWriter out.")
 }
