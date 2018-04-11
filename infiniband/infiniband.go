@@ -182,9 +182,7 @@ func ScanCAs(caNames []string) {
 }
 
 func Sweep(c chan Fabric) {
-	log.Println("Sweep")
 	for _, ca := range umad_ca_list {
-		log.Printf("Sweep - %#v\n", ca)
 		caDiscoverFabric(ca, c)
 	}
 }
