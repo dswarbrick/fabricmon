@@ -176,7 +176,7 @@ func ScanCAs(caNames []string) {
 			"node GUID: %#016x, system GUID: %#016x\n",
 			C.GoString(&ca.ca_name[0]), C.GoString(&ca.ca_type[0]), ca.numports,
 			C.GoString(&ca.fw_ver[0]), C.GoString(&ca.hw_ver[0]),
-			Ntohll(uint64(ca.node_guid)), Ntohll(uint64(ca.system_guid)))
+			ntohll(uint64(ca.node_guid)), ntohll(uint64(ca.system_guid)))
 
 		umad_ca_list[i] = ca
 	}
@@ -186,7 +186,7 @@ func Sweep(c chan Fabric) {
 	log.Println("Sweep")
 	for _, ca := range umad_ca_list {
 		log.Printf("Sweep - %#v\n", ca)
-		CADiscoverFabric(ca, c)
+		caDiscoverFabric(ca, c)
 	}
 }
 

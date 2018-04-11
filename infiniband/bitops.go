@@ -27,7 +27,7 @@ func init() {
 // MaxPow2Divisor calculates the highest power of two divisor shared by two non-negative integers.
 // This is useful for finding the highest bit enum shared by two values. If x and y do not share
 // any common bits, the result is zero.
-func MaxPow2Divisor(x, y uint) uint {
+func maxPow2Divisor(x, y uint) uint {
 	if x&y == 0 {
 		return 0
 	}
@@ -36,7 +36,7 @@ func MaxPow2Divisor(x, y uint) uint {
 }
 
 // htons converts a uint16 from host byte order to network byte order
-func Htons(x uint16) uint16 {
+func htons(x uint16) uint16 {
 	if nativeEndian != binary.BigEndian {
 		return bits.ReverseBytes16(x)
 	}
@@ -44,7 +44,7 @@ func Htons(x uint16) uint16 {
 }
 
 // ntohs converts a uint16 from network byte order to host byte order
-func Ntohs(x uint16) uint16 {
+func ntohs(x uint16) uint16 {
 	if nativeEndian != binary.BigEndian {
 		return bits.ReverseBytes16(x)
 	}
@@ -52,7 +52,7 @@ func Ntohs(x uint16) uint16 {
 }
 
 // ntohll converts a uint32 from network byte order to host byte order
-func Ntohl(x uint32) uint32 {
+func ntohl(x uint32) uint32 {
 	if nativeEndian != binary.BigEndian {
 		return bits.ReverseBytes32(x)
 	}
@@ -60,7 +60,7 @@ func Ntohl(x uint32) uint32 {
 }
 
 // ntohll converts a uint64 from network byte order to host byte order
-func Ntohll(x uint64) uint64 {
+func ntohll(x uint64) uint64 {
 	if nativeEndian != binary.BigEndian {
 		return bits.ReverseBytes64(x)
 	}

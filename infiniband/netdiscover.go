@@ -15,7 +15,7 @@ import (
 	"unsafe"
 )
 
-func CADiscoverFabric(ca C.umad_ca_t, output chan Fabric) {
+func caDiscoverFabric(ca C.umad_ca_t, output chan Fabric) {
 	hostname, _ := os.Hostname()
 	caName := C.GoString(&ca.ca_name[0])
 

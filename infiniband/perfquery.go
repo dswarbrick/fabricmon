@@ -28,8 +28,8 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	}
 
 	// Keep capMask in network byte order for easier bitwise operations with capabilities contants.
-	capMask := Htons(uint16(C.mad_get_field(unsafe.Pointer(&buf), 0, C.IB_CPI_CAPMASK_F)))
-	log.Printf("Port %d Cap Mask: %#x\n", portNum, Ntohs(capMask))
+	capMask := htons(uint16(C.mad_get_field(unsafe.Pointer(&buf), 0, C.IB_CPI_CAPMASK_F)))
+	log.Printf("Port %d Cap Mask: %#x\n", portNum, ntohs(capMask))
 
 	// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and PortRcvDataSL, components
 	// that represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather
@@ -144,7 +144,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 			// Port counters will only be fetched if port is ACTIVE + LINKUP
 			if (portState == C.IB_LINK_ACTIVE) && (physState == C.IB_PORT_PHYS_STATE_LINKUP) {
 				// Determine max width supported by both ends
-				maxWidth := MaxPow2Divisor(
+				maxWidth := maxPow2Divisor(
 					uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)),
 					uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)))
 
@@ -154,7 +154,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 				}
 
 				// Determine max speed supported by both ends
-				maxSpeed := MaxPow2Divisor(
+				maxSpeed := maxPow2Divisor(
 					uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)),
 					uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)))
 
