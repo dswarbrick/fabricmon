@@ -127,6 +127,19 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 		linkWidth := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_ACTIVE_F)
 		linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
 
+		// TESTING
+		fdr10 := C.mad_get_field(unsafe.Pointer(&pp.ext_info), 0, C.IB_MLNX_EXT_PORT_LINK_SPEED_ACTIVE_F) & C.FDR10
+		if fdr10 != 0 {
+			log.Debugf("Port %d fdr10 %#v", portNum, fdr10)
+		}
+
+		capMask := htonl(uint32(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_CAPMASK_F)))
+		if capMask&C.IB_PORT_CAP_HAS_EXT_SPEEDS != 0 {
+			extSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_EXT_ACTIVE_F)
+			log.Infof("Port %d IB_PORT_CAP_HAS_EXT_SPEEDS %#v", portNum, extSpeed)
+		}
+		// END TESTING
+
 		log.Debugf("Port %d, port state: %s, phys state: %s, link width: %s, link speed: %s",
 			portNum,
 			PortStateToStr(uint(portState)),

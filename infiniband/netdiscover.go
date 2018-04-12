@@ -31,7 +31,7 @@ func (h *HCA) NetDiscover(output chan Fabric) {
 		totalNodes, totalPorts int
 	)
 
-	mgmt_classes := [3]C.int{C.IB_SMI_CLASS, C.IB_SA_CLASS, C.IB_PERFORMANCE_CLASS}
+	mgmt_classes := [...]C.int{C.IB_SMI_CLASS, C.IB_SA_CLASS, C.IB_PERFORMANCE_CLASS}
 
 	hostname, _ := os.Hostname()
 	start := time.Now()
@@ -47,7 +47,7 @@ func (h *HCA) NetDiscover(output chan Fabric) {
 		log.WithFields(log.Fields{"ca": h.Name, "port": portNum}).Debug("Polling port")
 
 		// ibnd_config_t specifies max hops, timeout, max SMPs etc
-		var config C.ibnd_config_t
+		config := C.ibnd_config_t{flags: C.IBND_CONFIG_MLX_EPI}
 
 		// NOTE: Under ibsim, this will fail after a certain number of iterations with a
 		// mad_rpc_open_port() errors (presumably due to a resource leak in ibsim).
