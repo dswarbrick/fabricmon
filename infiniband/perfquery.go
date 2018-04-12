@@ -107,9 +107,8 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 	arrayPtr := uintptr(unsafe.Pointer(node.ports))
 
 	for portNum := 0; portNum <= int(node.numports); portNum++ {
-		// Get pointer to port struct and increment arrayPtr to next pointer.
-		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))
-		arrayPtr += unsafe.Sizeof(arrayPtr)
+		// Get pointer to port struct at portNum array offset
+		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr + unsafe.Sizeof(arrayPtr)*uintptr(portNum)))
 
 		myPort := Port{GUID: uint64(pp.guid)}
 
@@ -128,15 +127,30 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 		linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
 
 		// TESTING
-		fdr10 := C.mad_get_field(unsafe.Pointer(&pp.ext_info), 0, C.IB_MLNX_EXT_PORT_LINK_SPEED_ACTIVE_F) & C.FDR10
-		if fdr10 != 0 {
-			log.Debugf("Port %d fdr10 %#v", portNum, fdr10)
+		var (
+			info     *[C.IB_SMP_DATA_SIZE]C.uchar
+			extSpeed uint
+		)
+
+		if node._type == C.IB_NODE_SWITCH {
+			info = &(*(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))).info
+		} else {
+			info = &pp.info
 		}
 
-		capMask := htonl(uint32(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_CAPMASK_F)))
+		capMask := htonl(uint32(C.mad_get_field(unsafe.Pointer(info), 0, C.IB_PORT_CAPMASK_F)))
 		if capMask&C.IB_PORT_CAP_HAS_EXT_SPEEDS != 0 {
-			extSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_EXT_ACTIVE_F)
-			log.Infof("Port %d IB_PORT_CAP_HAS_EXT_SPEEDS %#v", portNum, extSpeed)
+			extSpeed = uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_EXT_ACTIVE_F))
+		}
+
+		if extSpeed == 0 {
+			fdr10 := C.mad_get_field(unsafe.Pointer(&pp.ext_info), 0, C.IB_MLNX_EXT_PORT_LINK_SPEED_ACTIVE_F) & C.FDR10
+
+			if fdr10 != 0 {
+				log.Debugf("Port %d is FDR10", portNum)
+			}
+		} else {
+			log.Debugf("Port %d has extended speed %d", portNum, extSpeed)
 		}
 		// END TESTING
 
