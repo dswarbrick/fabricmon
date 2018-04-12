@@ -43,6 +43,22 @@ func htons(x uint16) uint16 {
 	return x
 }
 
+// htonl converts a uint32 from host byte order to network byte order
+func htonl(x uint32) uint32 {
+	if nativeEndian != binary.BigEndian {
+		return bits.ReverseBytes32(x)
+	}
+	return x
+}
+
+// htonll converts a uint64 from host byte order to network byte order
+func htonll(x uint64) uint64 {
+	if nativeEndian != binary.BigEndian {
+		return bits.ReverseBytes64(x)
+	}
+	return x
+}
+
 // ntohs converts a uint16 from network byte order to host byte order
 func ntohs(x uint16) uint16 {
 	if nativeEndian != binary.BigEndian {
