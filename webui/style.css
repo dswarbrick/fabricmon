@@ -51,6 +51,26 @@ svg .links line {
   stroke: #999;
 }
 
+svg .links line.ddr {
+  stroke: brown;
+}
+
+svg .links line.qdr {
+  stroke: orange;
+}
+
+svg .links line.fdr10 {
+  stroke: red;
+}
+
+svg .links line.fdr {
+  stroke: purple;
+}
+
+svg .links line.edr {
+  stroke: blue;
+}
+
 svg .node {
   cursor: pointer;
 }

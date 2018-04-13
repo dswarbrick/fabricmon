@@ -109,11 +109,20 @@ function changeFabric() {
       .selectAll("line")
       .data(graph.links)
       .enter().append("line")
+        .attr("class", function(d) {
+          return d.link_speed.toLowerCase();
+        })
         .attr("stroke-width", function(d) {
-          if (d.value)
-            return Math.sqrt(d.value);
-          else
-            return 1;
+          switch (d.link_width) {
+            case "1X":
+            case "4X":
+            case "8X":
+            case "12X":
+              return Math.sqrt(parseInt(d.link_width, 10));
+              break;
+          }
+
+          return 1;
         });
 
     var node = g.selectAll(".node")
