@@ -16,6 +16,9 @@ import (
 )
 
 // getPortCounters retrieves all counters for a specific port.
+// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and PortRcvDataSL, components that
+// represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather than just
+// octets.
 func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibmad_port) (map[uint32]interface{}, error) {
 	var buf [1024]byte
 
@@ -30,11 +33,6 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 
 	// Keep capMask in network byte order for easier bitwise operations with capabilities contants.
 	capMask := htons(uint16(C.mad_get_field(unsafe.Pointer(&buf), 0, C.IB_CPI_CAPMASK_F)))
-	log.Debugf("Port %d cap. mask: %#x", portNum, ntohs(capMask))
-
-	// Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and PortRcvDataSL, components
-	// that represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather
-	// than just octets.
 
 	// Fetch standard (32 bit (or less)) counters
 	pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, ibmadPort)
@@ -107,6 +105,12 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 	arrayPtr := uintptr(unsafe.Pointer(node.ports))
 
 	for portNum := 0; portNum <= int(node.numports); portNum++ {
+		var (
+			info         *[C.IB_SMP_DATA_SIZE]C.uchar
+			linkSpeedExt uint
+			linkSpeedStr string
+		)
+
 		// Get pointer to port struct at portNum array offset
 		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr + unsafe.Sizeof(arrayPtr)*uintptr(portNum)))
 
@@ -122,16 +126,9 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 			continue
 		}
 
-		// TODO: Decode EXT_PORT_LINK_SPEED (i.e., FDR, FDR10, EDR).
 		linkWidth := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_ACTIVE_F)
-		linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
 
-		// TESTING
-		var (
-			info     *[C.IB_SMP_DATA_SIZE]C.uchar
-			extSpeed uint
-		)
-
+		// Check for extended speed support
 		if node._type == C.IB_NODE_SWITCH {
 			info = &(*(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))).info
 		} else {
@@ -140,35 +137,34 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 
 		capMask := htonl(uint32(C.mad_get_field(unsafe.Pointer(info), 0, C.IB_PORT_CAPMASK_F)))
 		if capMask&C.IB_PORT_CAP_HAS_EXT_SPEEDS != 0 {
-			extSpeed = uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_EXT_ACTIVE_F))
+			linkSpeedExt = uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_EXT_ACTIVE_F))
 		}
 
-		if extSpeed == 0 {
+		if linkSpeedExt > 0 {
+			linkSpeedStr = LinkSpeedExtToStr(uint(linkSpeedExt))
+		} else {
 			fdr10 := C.mad_get_field(unsafe.Pointer(&pp.ext_info), 0, C.IB_MLNX_EXT_PORT_LINK_SPEED_ACTIVE_F) & C.FDR10
 
 			if fdr10 != 0 {
-				log.Debugf("Port %d is FDR10", portNum)
+				linkSpeedStr = "10.0 Gbps (FDR10)"
+			} else {
+				linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
+				linkSpeedStr = LinkSpeedToStr(uint(linkSpeed))
 			}
-		} else {
-			log.Debugf("Port %d has extended speed %d", portNum, extSpeed)
+
 		}
-		// END TESTING
 
 		log.Debugf("Port %d, port state: %s, phys state: %s, link width: %s, link speed: %s",
 			portNum,
 			PortStateToStr(uint(portState)),
 			PortPhysStateToStr(uint(physState)),
 			LinkWidthToStr(uint(linkWidth)),
-			LinkSpeedToStr(uint(linkSpeed)))
+			linkSpeedStr)
 
 		// Remote port may be nil if port state is polling / armed.
 		rp := pp.remoteport
 
 		if rp != nil {
-			log.Debugf("Remote node type: %d, GUID: %#016x, descr: %s",
-				rp.node._type, rp.node.guid,
-				nnMap.RemapNodeName(uint64(rp.node.guid), C.GoString(&rp.node.nodedesc[0])))
-
 			myPort.RemoteGUID = uint64(rp.node.guid)
 
 			// Port counters will only be fetched if port is ACTIVE + LINKUP
@@ -184,14 +180,18 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 				}
 
 				// Determine max speed supported by both ends
-				maxSpeed := maxPow2Divisor(
-					uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)),
-					uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)))
+				// TODO: Check for possible FDR10 support (ext_info IB_MLNX_EXT_PORT_LINK_SPEED_SUPPORTED_F)
+				// TODO: Check for possible extended speed (info IB_PORT_LINK_SPEED_EXT_SUPPORTED_F)
+				/*
+					maxSpeed := maxPow2Divisor(
+						uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)),
+						uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)))
 
-				if uint(linkSpeed) != maxSpeed {
-					log.Warnf("Port %d link speed is not the max speed supported by both ports",
-						portNum)
-				}
+					if uint(linkSpeed) != maxSpeed {
+						log.Warnf("Port %d link speed is not the max speed supported by both ports",
+							portNum)
+					}
+				*/
 
 				if counters, err := getPortCounters(&portid, portNum, mad_port); err == nil {
 					myPort.Counters = counters

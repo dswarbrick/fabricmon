@@ -110,11 +110,25 @@ func LinkSpeedToStr(speed uint) string {
 	case 0:
 		return "Extended speed"
 	case 1:
-		return "2.5 Gbps"
+		return "2.5 Gbps (SDR)"
 	case 2:
-		return "5.0 Gbps"
+		return "5.0 Gbps (DDR)"
 	case 4:
-		return "10.0 Gbps"
+		return "10.0 Gbps (QDR)"
+	default:
+		return fmt.Sprintf("undefined (%d)", speed)
+	}
+}
+
+// cf. PortInfo, table 155
+func LinkSpeedExtToStr(speed uint) string {
+	switch speed {
+	case 0:
+		return "No extended speed active"
+	case 1:
+		return "14.0625 Gbps (FDR)"
+	case 2:
+		return "25.78125 Gbps (EDR)"
 	default:
 		return fmt.Sprintf("undefined (%d)", speed)
 	}
