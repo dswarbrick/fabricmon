@@ -10,15 +10,15 @@ import (
 )
 
 func TestMaxPow2Divisor(t *testing.T) {
-	if MaxPow2Divisor(4+2+1, 2+1) != 2 {
+	if maxPow2Divisor(4+2+1, 2+1) != 2 {
 		t.Fail()
 	}
 
-	if MaxPow2Divisor(8, 4+2+1) != 0 {
+	if maxPow2Divisor(8, 4+2+1) != 0 {
 		t.Fail()
 	}
 
-	if MaxPow2Divisor(8+4+1, 2+1) != 1 {
+	if maxPow2Divisor(8+4+1, 2+1) != 1 {
 		t.Fail()
 	}
 }
