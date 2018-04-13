@@ -100,63 +100,93 @@
   "links": [
     {
       "source": "003048ffff95ac63",
-      "target": "003048ffff95fd1a"
+      "target": "003048ffff95fd1a",
+      "link_speed": "EDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff95ac63",
-      "target": "003048ffff95bc92"
+      "target": "003048ffff95bc92",
+      "link_speed": "EDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff95ac63",
-      "target": "003048ffff9553a3"
+      "target": "003048ffff9553a3",
+      "link_speed": "EDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff95fd1a",
-      "target": "f452140300dad7ff"
+      "target": "f452140300dad7ff",
+      "link_speed": "QDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff95fd1a",
-      "target": "f45214030039c991"
+      "target": "f45214030039c991",
+      "link_speed": "QDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff95fd1a",
-      "target": "f452140300e8e414"
+      "target": "f452140300e8e414",
+      "link_speed": "QDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff95fd1a",
-      "target": "f4521403002dd60e"
+      "target": "f4521403002dd60e",
+      "link_speed": "QDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff95bc92",
-      "target": "f452140300799f01"
+      "target": "f452140300799f01",
+      "link_speed": "QDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff95bc92",
-      "target": "f452140300101f40"
+      "target": "f452140300101f40",
+      "link_speed": "QDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff95bc92",
-      "target": "f452140300996604"
+      "target": "f452140300996604",
+      "link_speed": "QDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff95bc92",
-      "target": "f452140300b6b712"
+      "target": "f452140300b6b712",
+      "link_speed": "QDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff9553a3",
-      "target": "f4521403008f4a89"
+      "target": "f4521403008f4a89",
+      "link_speed": "QDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff9553a3",
-      "target": "f45214030062840c"
+      "target": "f45214030062840c",
+      "link_speed": "QDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff9553a3",
-      "target": "f452140300fa7f87"
+      "target": "f452140300fa7f87",
+      "link_speed": "QDR",
+      "link_width": "4X"
     },
     {
       "source": "003048ffff9553a3",
-      "target": "f452140300a10281"
+      "target": "f452140300a10281",
+      "link_speed": "QDR",
+      "link_width": "4X"
     }
   ]
 }

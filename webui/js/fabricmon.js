@@ -81,7 +81,7 @@ function changeFabric() {
   if (jsonUrl === "")
     return;
   else
-    console.log("Loading " + jsonUrl);
+    console.log("Loading " + jsonUrl + "?t=" + Date.now());
 
   // Container group which will be used for zooming
   var g = viewPort.append("g");
