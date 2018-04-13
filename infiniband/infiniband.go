@@ -37,6 +37,8 @@ type Node struct {
 type Port struct {
 	GUID       uint64
 	RemoteGUID uint64
+	LinkWidth  string // link width, e.g., 1X, 4X, 8X, 12X
+	LinkSpeed  string // link speed, e.g., SDR, DDR, QDR, FDR, FDR10, EDR
 	Counters   map[uint32]interface{}
 }
 
@@ -110,11 +112,11 @@ func LinkSpeedToStr(speed uint) string {
 	case 0:
 		return "Extended speed"
 	case 1:
-		return "2.5 Gbps (SDR)"
+		return "SDR" // 2.5 Gbps
 	case 2:
-		return "5.0 Gbps (DDR)"
+		return "DDR" // 5.0 Gbps
 	case 4:
-		return "10.0 Gbps (QDR)"
+		return "QDR" // 10.0 Gbps (8/10b encoding, as opposed to FDR10 64/66b encoding)
 	default:
 		return fmt.Sprintf("undefined (%d)", speed)
 	}
@@ -126,9 +128,9 @@ func LinkSpeedExtToStr(speed uint) string {
 	case 0:
 		return "No extended speed active"
 	case 1:
-		return "14.0625 Gbps (FDR)"
+		return "FDR" // 14.0625 Gbps
 	case 2:
-		return "25.78125 Gbps (EDR)"
+		return "EDR" // 25.78125 Gbps
 	default:
 		return fmt.Sprintf("undefined (%d)", speed)
 	}

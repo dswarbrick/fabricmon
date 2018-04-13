@@ -108,7 +108,6 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 		var (
 			info         *[C.IB_SMP_DATA_SIZE]C.uchar
 			linkSpeedExt uint
-			linkSpeedStr string
 		)
 
 		// Get pointer to port struct at portNum array offset
@@ -127,6 +126,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 		}
 
 		linkWidth := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_ACTIVE_F)
+		myPort.LinkWidth = LinkWidthToStr(uint(linkWidth))
 
 		// Check for extended speed support
 		if node._type == C.IB_NODE_SWITCH {
@@ -141,25 +141,22 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 		}
 
 		if linkSpeedExt > 0 {
-			linkSpeedStr = LinkSpeedExtToStr(uint(linkSpeedExt))
+			myPort.LinkSpeed = LinkSpeedExtToStr(linkSpeedExt)
 		} else {
 			fdr10 := C.mad_get_field(unsafe.Pointer(&pp.ext_info), 0, C.IB_MLNX_EXT_PORT_LINK_SPEED_ACTIVE_F) & C.FDR10
 
 			if fdr10 != 0 {
-				linkSpeedStr = "10.0 Gbps (FDR10)"
+				myPort.LinkSpeed = "FDR10"
 			} else {
 				linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
-				linkSpeedStr = LinkSpeedToStr(uint(linkSpeed))
+				myPort.LinkSpeed = LinkSpeedToStr(uint(linkSpeed))
 			}
-
 		}
 
 		log.Debugf("Port %d, port state: %s, phys state: %s, link width: %s, link speed: %s",
 			portNum,
-			PortStateToStr(uint(portState)),
-			PortPhysStateToStr(uint(physState)),
-			LinkWidthToStr(uint(linkWidth)),
-			linkSpeedStr)
+			PortStateToStr(uint(portState)), PortPhysStateToStr(uint(physState)),
+			myPort.LinkWidth, myPort.LinkSpeed)
 
 		// Remote port may be nil if port state is polling / armed.
 		rp := pp.remoteport

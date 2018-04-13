@@ -27,9 +27,11 @@ type d3Node struct {
 type d3Link struct {
 	Source string `json:"source"`
 	Target string `json:"target"`
+	Width  string `json:"link_width"`
+	Speed  string `json:"link_speed"`
 }
 
-type D3Topology struct {
+type d3Topology struct {
 	Nodes []d3Node `json:"nodes"`
 	Links []d3Link `json:"links"`
 }
@@ -63,7 +65,7 @@ func (fg *ForceGraphWriter) Receiver(input chan infiniband.Fabric) {
 func makeD3(nodes []infiniband.Node) []byte {
 	nnMap, _ := infiniband.NewNodeNameMap()
 
-	topo := D3Topology{}
+	topo := d3Topology{}
 
 	for _, node := range nodes {
 		d3n := d3Node{
@@ -79,8 +81,10 @@ func makeD3(nodes []infiniband.Node) []byte {
 		for _, port := range node.Ports {
 			if port.RemoteGUID != 0 {
 				topo.Links = append(topo.Links, d3Link{
-					fmt.Sprintf("%016x", node.GUID),
-					fmt.Sprintf("%016x", port.RemoteGUID),
+					Source: fmt.Sprintf("%016x", node.GUID),
+					Target: fmt.Sprintf("%016x", port.RemoteGUID),
+					Width:  port.LinkWidth,
+					Speed:  port.LinkSpeed,
 				})
 			}
 		}

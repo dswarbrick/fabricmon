@@ -142,8 +142,6 @@ func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []N
 			DeviceID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_DEVID_F)),
 		}
 
-		log.Debugf("Node: %#v", myNode)
-
 		if node._type == C.IB_NODE_SWITCH {
 			myNode.Ports = walkPorts(node, mad_port)
 		}
