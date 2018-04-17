@@ -24,7 +24,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 
 	counters := make(map[uint32]interface{})
 
-	// PerfMgt ClassPortInfo is a required attribute. See PortInfoRecord, IBTA spec v1.3, table 211.
+	// PerfMgt ClassPortInfo is a required attribute. See ClassPortInfo, IBTA spec v1.3, table 126.
 	pmaBuf := C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.CLASS_PORT_INFO, ibmadPort)
 
 	if pmaBuf == nil {
