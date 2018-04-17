@@ -29,8 +29,8 @@ type Node struct {
 	GUID     uint64
 	NodeType int
 	NodeDesc string
-	VendorID uint16
-	DeviceID uint16
+	VendorID uint
+	DeviceID uint
 	Ports    []Port
 }
 

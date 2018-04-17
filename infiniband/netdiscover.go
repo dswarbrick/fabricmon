@@ -138,8 +138,8 @@ func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []N
 			GUID:     uint64(node.guid),
 			NodeType: int(node._type),
 			NodeDesc: C.GoString(&node.nodedesc[0]),
-			VendorID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_VENDORID_F)),
-			DeviceID: uint16(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_DEVID_F)),
+			VendorID: uint(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_VENDORID_F)),
+			DeviceID: uint(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_DEVID_F)),
 		}
 
 		if node._type == C.IB_NODE_SWITCH {

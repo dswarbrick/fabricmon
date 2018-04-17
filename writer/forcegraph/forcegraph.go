@@ -20,8 +20,8 @@ type d3Node struct {
 	ID       string `json:"id"`
 	Desc     string `json:"desc"`
 	NodeType int    `json:"nodetype"`
-	VendorID uint16 `json:"vendor_id"`
-	DeviceID uint16 `json:"device_id"`
+	VendorID uint   `json:"vendor_id"`
+	DeviceID uint   `json:"device_id"`
 }
 
 type d3Link struct {
