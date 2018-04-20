@@ -71,20 +71,16 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 				tags["port"] = strconv.Itoa(portNum)
 
 				for counter, value := range port.Counters {
-					switch value.(type) {
+					switch v := value.(type) {
 					case uint32:
 						tags["counter"] = infiniband.StdCounterMap[counter].Name
+						fields["value"] = int64(v)
 					case uint64:
 						tags["counter"] = infiniband.ExtCounterMap[counter].Name
-					}
-
-					// FIXME: InfluxDB < 1.6 does not support uint64
-					// (https://github.com/influxdata/influxdb/pull/8923)
-					// Workaround is to either convert to int64 (i.e., truncate to 63 bits).
-					if v, ok := value.(uint64); ok {
+						// FIXME: InfluxDB < 1.6 does not support uint64
+						// (https://github.com/influxdata/influxdb/pull/8923)
+						// Workaround is to convert to int64 (i.e., truncate to 63 bits).
 						fields["value"] = int64(v & 0x7fffffffffffffff)
-					} else {
-						fields["value"] = int64(v)
 					}
 
 					if point, err := client.NewPoint("fabricmon_counters", tags, fields, now); err == nil {

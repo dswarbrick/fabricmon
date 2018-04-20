@@ -49,7 +49,9 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 			counters[field] = uint32(C.mad_get_field(unsafe.Pointer(&buf), 0, field))
 
 			// FIXME: Honour the counter_reset_threshold value in config
-			if float64(counters[field].(uint32)) > (float64(counter.Limit) * 0.01) {
+			if float64(counters[field].(uint32)) > (float64(counter.Limit) * 0.1) {
+				log.Warnf("Port %d counter %s (%d) exceeds threshold",
+					portNum, counter.Name, counters[field])
 				selMask |= counter.Select
 			}
 		}
