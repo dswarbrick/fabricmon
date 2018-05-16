@@ -6,6 +6,8 @@ Build-Depends: debhelper (>=10), libibmad-dev, libibumad-dev, libibnetdisc-dev,
     libopensm-dev
 Standards-Version: 4.0.0
 Homepage: https://github.com/dswarbrick/fabricmon
+Vcs-Browser: https://github.com/dswarbrick/fabricmon
+Vcs-Git: git@github.com:dswarbrick/fabricmon.git
 
 Package: fabricmon
 Architecture: amd64
