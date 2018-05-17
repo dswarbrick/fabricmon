@@ -56,7 +56,6 @@ func router(input chan infiniband.Fabric, writers []writer.FMWriter) {
 func main() {
 	var (
 		configFile = kingpin.Flag("config", "Path to config file.").Default("fabricmon.conf").String()
-		jsonDir    = kingpin.Flag("json-dir", "Output directory for JSON topologies.").Default("./").String()
 		daemonize  = kingpin.Flag("daemonize", "Run forever, fetching counters periodically.").Default("true").Bool()
 	)
 
@@ -98,8 +97,12 @@ func main() {
 		close(shutdownChan)
 	}()
 
-	// Initialize writers slice with just the d3.js ForceGraphWriter
-	writers := []writer.FMWriter{&forcegraph.ForceGraphWriter{OutputDir: *jsonDir}}
+	// Initialize empty slice to hold writers
+	writers := make([]writer.FMWriter, 0)
+
+	if conf.Topology.Enabled {
+		writers = append(writers, &forcegraph.ForceGraphWriter{OutputDir: conf.Topology.OutputDir})
+	}
 
 	// First sweep.
 	for _, hca := range hcas {

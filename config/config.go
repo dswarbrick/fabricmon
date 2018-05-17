@@ -8,8 +8,18 @@ import (
 	"fmt"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/BurntSushi/toml"
 )
+
+// FabricmonConf is the main configuration struct for FabricMon.
+type FabricmonConf struct {
+	PollInterval   Duration `toml:"poll_interval"`
+	ResetThreshold uint     `toml:"counter_reset_threshold"`
+	InfluxDB       []InfluxDBConf
+	Topology       TopologyConf
+}
 
 // InfluxDBConf holds the configuration values for a single InfluxDB instance.
 type InfluxDBConf struct {
@@ -19,11 +29,19 @@ type InfluxDBConf struct {
 	Password string
 }
 
-// FabricmonConf is the main configuration struct for FabricMon.
-type FabricmonConf struct {
-	PollInterval   Duration `toml:"poll_interval"`
-	ResetThreshold uint     `toml:"counter_reset_threshold"`
-	InfluxDB       []InfluxDBConf
+type TopologyConf struct {
+	Enabled   bool
+	OutputDir string `toml:"output_dir"`
+}
+
+func (conf *TopologyConf) validate() error {
+	if conf.Enabled {
+		if err := unix.Access(conf.OutputDir, unix.W_OK); err != nil {
+			return fmt.Errorf("Topology output directory: %s", err)
+		}
+	}
+
+	return nil
 }
 
 // Duration is a TOML wrapper type for time.Duration.
@@ -62,10 +80,17 @@ func ReadConfig(configFile string) (FabricmonConf, error) {
 	// Defaults
 	conf := FabricmonConf{
 		PollInterval: Duration(time.Second * 10),
+		Topology: TopologyConf{
+			Enabled: false,
+		},
 	}
 
 	if _, err := toml.DecodeFile(configFile, &conf); err != nil {
 		return conf, fmt.Errorf("Cannot open / parse config file: %s", err)
+	}
+
+	if err := conf.Topology.validate(); err != nil {
+		return conf, err
 	}
 
 	return conf, nil
