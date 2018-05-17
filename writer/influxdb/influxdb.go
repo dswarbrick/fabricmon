@@ -1,9 +1,10 @@
 // Copyright 2017-18 Daniel Swarbrick. All rights reserved.
 // Use of this source code is governed by a GPL license that can be found in the LICENSE file.
-
-// InfluxDB client functions.
+//
 // TODO: Add support for specifying retention policy.
 
+// Package influxdb implements the InfluxDBWriter, which writes InfiniBand performance counters to
+// one or more configured InfluxDB backends.
 package influxdb
 
 import (

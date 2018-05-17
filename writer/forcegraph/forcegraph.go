@@ -1,8 +1,8 @@
 // Copyright 2017-18 Daniel Swarbrick. All rights reserved.
 // Use of this source code is governed by a GPL license that can be found in the LICENSE file.
 
-// JSON structs / serialisation for d3.js force graph
-
+// Package forecegraph implements the ForceGraphWriter, which writes the fabric topology to a JSON
+// file suitable for use by the d3.js force graph functions.
 package forcegraph
 
 import (
