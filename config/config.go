@@ -21,7 +21,6 @@ type InfluxDBConf struct {
 
 // FabricmonConf is the main configuration struct for FabricMon.
 type FabricmonConf struct {
-	BindAddress    string   `toml:"bind_address"`
 	PollInterval   Duration `toml:"poll_interval"`
 	ResetThreshold uint     `toml:"counter_reset_threshold"`
 	InfluxDB       []InfluxDBConf
@@ -62,7 +61,6 @@ func (d Duration) MarshalText() (text []byte, err error) {
 func ReadConfig(configFile string) (FabricmonConf, error) {
 	// Defaults
 	conf := FabricmonConf{
-		BindAddress:  ":8090",
 		PollInterval: Duration(time.Second * 10),
 	}
 
