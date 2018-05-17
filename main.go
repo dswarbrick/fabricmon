@@ -30,7 +30,7 @@ import (
 
 // router duplicates a Fabric struct received via channel and outputs it to multiple receiver
 // channels.
-func router(input chan infiniband.Fabric, writers []writer.FMWriter) {
+func router(input chan infiniband.Fabric, writers []writer.FabricWriter) {
 	outputs := make([]chan infiniband.Fabric, len(writers))
 
 	// Create output channels for workers, and start worker goroutine
@@ -98,7 +98,7 @@ func main() {
 	}()
 
 	// Initialize empty slice to hold writers
-	writers := make([]writer.FMWriter, 0)
+	writers := make([]writer.FabricWriter, 0)
 
 	if conf.Topology.Enabled {
 		writers = append(writers, &forcegraph.ForceGraphWriter{OutputDir: conf.Topology.OutputDir})
