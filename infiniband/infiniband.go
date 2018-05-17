@@ -108,7 +108,8 @@ var portPhysStates = [...]string{
 	"Phy Test",
 }
 
-// cf. PortInfo, table 155
+// LinkSpeedToStr converts an InfiniBand link speed enum to a human-readable string.
+// cf. IBTA spec v1.3, PortInfo, table 155.
 func LinkSpeedToStr(speed uint) string {
 	switch speed {
 	case 0:
@@ -124,7 +125,8 @@ func LinkSpeedToStr(speed uint) string {
 	}
 }
 
-// cf. PortInfo, table 155
+// LinkSpeedExtToStr converts an InfiniBand extended link speed enum to a human-readable string.
+// cf. IBTA spec v1.3, PortInfo, table 155.
 func LinkSpeedExtToStr(speed uint) string {
 	switch speed {
 	case 0:
@@ -138,7 +140,8 @@ func LinkSpeedExtToStr(speed uint) string {
 	}
 }
 
-// cf. PortInfo, table 155
+// LinkWidthToStr converts an InfiniBand link width enum to a human-readable string.
+// cf. IBTA spec v1.3, PortInfo, table 155.
 func LinkWidthToStr(width uint) string {
 	switch width {
 	case 1:
@@ -154,6 +157,7 @@ func LinkWidthToStr(width uint) string {
 	}
 }
 
+// PortStateToStr converts an InfiniBand port state enum to a human-readable string.
 func PortStateToStr(state uint) string {
 	if state < uint(len(portStates)) {
 		return portStates[state]
@@ -162,6 +166,7 @@ func PortStateToStr(state uint) string {
 	return fmt.Sprintf("undefined (%d)", state)
 }
 
+// PortPhysStateToStr converts an InfiniBand physical port state enum to a human-readable string.
 func PortPhysStateToStr(state uint) string {
 	if state < uint(len(portPhysStates)) {
 		return portPhysStates[state]
