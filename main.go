@@ -5,7 +5,7 @@
 // Note: Due to the usual permissions on /dev/infiniband/umad*, this will probably need to be
 // executed as root.
 
-// Package FabricMon is an InfiniBand fabric monitor daemon.
+// Package fabricmon is an InfiniBand fabric monitor daemon.
 //
 package main
 

@@ -26,7 +26,7 @@ type InfluxDBWriter struct {
 // receivers).
 func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     w.Config.Url,
+		Addr:     w.Config.URL,
 		Username: w.Config.Username,
 		Password: w.Config.Password,
 	})

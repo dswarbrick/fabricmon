@@ -3,6 +3,8 @@
 //
 // TODO: Implement user-friendly display of link rate (see ib_types.h).
 
+// Package infiniband wraps the low-level interactions with the C libraries such as libibmad. It
+// handles the fabric discovery and performance counter querying functionality of FabricMon.
 package infiniband
 
 // #cgo CFLAGS: -I/usr/include/infiniband

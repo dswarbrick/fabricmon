@@ -1,8 +1,7 @@
 // Copyright 2017-18 Daniel Swarbrick. All rights reserved.
 // Use of this source code is governed by a GPL license that can be found in the LICENSE file.
 
-// Config parsing.
-
+// Package config handles the configuration parsing for FabricMon.
 package config
 
 import (
@@ -12,13 +11,15 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+// InfluxDBConf holds the configuration values for a single InfluxDB instance.
 type InfluxDBConf struct {
-	Url      string
+	URL      string
 	Database string
 	Username string
 	Password string
 }
 
+// FabricmonConf is the main configuration struct for FabricMon.
 type FabricmonConf struct {
 	BindAddress    string   `toml:"bind_address"`
 	PollInterval   Duration `toml:"poll_interval"`
@@ -27,7 +28,7 @@ type FabricmonConf struct {
 }
 
 // Duration is a TOML wrapper type for time.Duration.
-// See https://github.com/golang/go/issues/24174
+// See https://github.com/golang/go/issues/24174.
 type Duration time.Duration
 
 // String returns the string representation of the duration.
@@ -35,7 +36,7 @@ func (d Duration) String() string {
 	return time.Duration(d).String()
 }
 
-// UnmarshalText parses a TOML value into a duration value.
+// UnmarshalText parses a byte slice value into a time.Duration value.
 func (d *Duration) UnmarshalText(text []byte) error {
 	// Ignore if there is no value set.
 	if len(text) == 0 {
@@ -53,7 +54,7 @@ func (d *Duration) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// MarshalText converts a duration to a string for decoding TOML.
+// MarshalText converts a duration to a string for encoding as TOML.
 func (d Duration) MarshalText() (text []byte, err error) {
 	return []byte(d.String()), nil
 }
