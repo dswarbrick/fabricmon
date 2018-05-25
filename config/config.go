@@ -11,6 +11,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/BurntSushi/toml"
+	"github.com/sirupsen/logrus"
 )
 
 // FabricmonConf is the main configuration struct for FabricMon.
@@ -18,6 +19,7 @@ type FabricmonConf struct {
 	PollInterval   Duration `toml:"poll_interval"`
 	ResetThreshold uint     `toml:"counter_reset_threshold"`
 	InfluxDB       []InfluxDBConf
+	Logging        LoggingConf
 	Topology       TopologyConf
 }
 
@@ -27,6 +29,11 @@ type InfluxDBConf struct {
 	Database string
 	Username string
 	Password string
+}
+
+type LoggingConf struct {
+	EnableSyslog bool     `toml:"enable_syslog"`
+	LogLevel     LogLevel `toml:"log_level"`
 }
 
 type TopologyConf struct {
@@ -71,18 +78,33 @@ func (d *Duration) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// MarshalText converts a duration to a string for encoding as TOML.
-func (d Duration) MarshalText() (text []byte, err error) {
-	return []byte(d.String()), nil
+// LogLevel is a TOML wrapper type for logrus.Level.
+type LogLevel logrus.Level
+
+// String returns the string representation of the log level.
+func (l LogLevel) String() string {
+	return logrus.Level(l).String()
+}
+
+// UnmarshalText parses a byte slice value into a logrus.Level value.
+func (l *LogLevel) UnmarshalText(text []byte) error {
+	level, err := logrus.ParseLevel(string(text))
+
+	if err == nil {
+		*l = LogLevel(level)
+	}
+
+	return err
 }
 
 func ReadConfig(configFile string) (FabricmonConf, error) {
 	// Defaults
 	conf := FabricmonConf{
 		PollInterval: Duration(time.Second * 10),
-		Topology: TopologyConf{
-			Enabled: false,
+		Logging: LoggingConf {
+			LogLevel: LogLevel(logrus.InfoLevel),
 		},
+		Topology: TopologyConf{},
 	}
 
 	if _, err := toml.DecodeFile(configFile, &conf); err != nil {
