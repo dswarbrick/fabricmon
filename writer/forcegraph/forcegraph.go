@@ -9,7 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"path"
+	"os"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 
@@ -46,23 +47,16 @@ func (fg *ForceGraphWriter) Receiver(input chan infiniband.Fabric) {
 	for fabric := range input {
 
 		if fg.OutputDir != "" {
-			filename := fmt.Sprintf("%s-%s-p%d.json",
-				fabric.Hostname, fabric.CAName, fabric.SourcePort)
-
-			buf := makeD3(fabric.Nodes)
-
-			// FIXME: This should write to a temporary file and perform an atomic move / rename,
-			// in case something is reading the .json file at the same time as we write to it.
-			if err := ioutil.WriteFile(path.Join(fg.OutputDir, filename), buf, 0644); err != nil {
-				log.WithError(err).Error("Cannot write d3.js JSON topology")
+			if err := writeTopology(fg.OutputDir, fabric); err != nil {
+				log.WithError(err).Error("cannot marshal fabric to force graph topology")
 			}
 		}
 	}
 }
 
-// makeD3 transforms the internal representation of InfiniBand nodes into d3.js nodes and links,
-// and returns marshalled JSON.
-func makeD3(nodes []infiniband.Node) []byte {
+// buildTopology transforms the internal representation of InfiniBand nodes into d3.js nodes and
+// links.
+func buildTopology(nodes []infiniband.Node) d3Topology {
 	nnMap, _ := infiniband.NewNodeNameMap()
 
 	topo := d3Topology{}
@@ -90,11 +84,32 @@ func makeD3(nodes []infiniband.Node) []byte {
 		}
 	}
 
-	jsonBuf, err := json.Marshal(topo)
+	return topo
+}
+
+// writeTopology writes a d3.js force graph JSON object file.
+func writeTopology(outputDir string, fabric infiniband.Fabric) error {
+	// Write d3.js topology to a temporary file, then rename it to target file, to ensure atomic
+	// updates and avoid partial reads by clients.
+	tempFile, err := ioutil.TempFile(outputDir, ".fabricmon")
 	if err != nil {
-		log.WithError(err).Error("JSON error")
-		return nil
+		return err
 	}
 
-	return jsonBuf
+	enc := json.NewEncoder(tempFile)
+	if err := enc.Encode(buildTopology(fabric.Nodes)); err != nil {
+		tempFile.Close()
+		os.Remove(tempFile.Name())
+		return err
+	}
+
+	tempFile.Close()
+	destFile := fmt.Sprintf("%s-%s-p%d.json", fabric.Hostname, fabric.CAName, fabric.SourcePort)
+
+	if err := os.Rename(filepath.Join(outputDir, tempFile.Name()), filepath.Join(outputDir, destFile)); err != nil {
+		os.Remove(tempFile.Name())
+		return err
+	}
+
+	return nil
 }
