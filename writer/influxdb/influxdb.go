@@ -44,8 +44,11 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 
 	for fabric := range input {
 		if batch, err := w.makeBatch(fabric); err == nil {
-			log.Infof("InfluxDB batch for HCA %s, port %d contains %d points",
-				fabric.CAName, fabric.SourcePort, len(batch.Points()))
+			log.WithFields(log.Fields{
+				"hca":    fabric.CAName,
+				"port":   fabric.SourcePort,
+				"points": len(batch.Points()),
+			}).Infof("InfluxDB batch created")
 
 			if err := c.Write(batch); err != nil {
 				log.Error(err)

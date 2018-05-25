@@ -83,17 +83,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
-	log.SetLevel(log.Level(conf.Logging.LogLevel))
-
 	if conf.Logging.EnableSyslog {
-		hook, err := lSyslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
+		log.SetFormatter(&log.TextFormatter{DisableColors: true, DisableTimestamp: true})
 
-		if err == nil {
+		if hook, err := lSyslog.NewSyslogHook("", "", syslog.LOG_INFO, ""); err == nil {
 			log.AddHook(hook)
 		}
+	} else {
+		log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 	}
 
+	log.SetLevel(log.Level(conf.Logging.LogLevel))
 	log.Info("FabricMon ", version.Info())
 
 	// Channel to signal goroutines that we are shutting down.
