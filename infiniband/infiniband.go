@@ -18,6 +18,8 @@ import (
 
 const (
 	PMA_TIMEOUT = 0
+
+	IB_NODE_SWITCH = C.IB_NODE_SWITCH
 )
 
 type Fabric struct {
