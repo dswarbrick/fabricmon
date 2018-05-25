@@ -101,7 +101,7 @@ func ReadConfig(configFile string) (FabricmonConf, error) {
 	// Defaults
 	conf := FabricmonConf{
 		PollInterval: Duration(time.Second * 10),
-		Logging: LoggingConf {
+		Logging: LoggingConf{
 			LogLevel: LogLevel(logrus.InfoLevel),
 		},
 		Topology: TopologyConf{},
