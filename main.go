@@ -12,6 +12,7 @@ package main
 import (
 	"fmt"
 	"log/syslog"
+	"math/rand"
 	"os"
 	"os/signal"
 	"time"
@@ -138,9 +139,13 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
+				ticker.Stop()
 				for _, hca := range hcas {
 					hca.NetDiscover(splitter)
 				}
+				intvl := int64(time.Duration(conf.PollInterval))
+				r := rand.Int63n(intvl/5) - intvl/10
+				ticker = time.NewTicker(time.Duration(conf.PollInterval) + time.Duration(r))
 			case <-shutdownChan:
 				log.Debug("Shutdown received in polling loop.")
 				break Loop
