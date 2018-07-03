@@ -5,15 +5,15 @@ Maintainer: Daniel Swarbrick <1667905+dswarbrick@users.noreply.github.com>
 Build-Depends: debhelper (>=9),
                dh-golang (>=1.9),
                dh-systemd,
-               golang-go,
                golang-github-burntsushi-toml-dev,
                golang-github-influxdb-influxdb-dev,
                golang-github-sirupsen-logrus-dev,
+               golang-go,
                golang-golang-x-sys-dev,
                golang-gopkg-alecthomas-kingpin.v2-dev,
                libibmad-dev,
-               libibumad-dev,
                libibnetdisc-dev,
+               libibumad-dev,
                libopensm-dev
 Standards-Version: 3.9.8
 Homepage: https://github.com/dswarbrick/fabricmon
@@ -22,12 +22,12 @@ Vcs-Git: git@github.com:dswarbrick/fabricmon.git
 
 Package: fabricmon
 Architecture: any
-Depends: ${shlibs:Depends},
-         ${misc:Depends},
-         libibmad5,
-         libibumad3,
+Depends: libibmad5,
          libibnetdisc5,
-         libosmcomp3
+         libibumad3,
+         libosmcomp3,
+         ${misc:Depends},
+         ${shlibs:Depends}
 Built-Using: ${misc:Built-Using}
 Description: InfiniBand performance monitoring daemon
  FabricMon is an InfiniBand performance monitoring daemon written in Go. It
