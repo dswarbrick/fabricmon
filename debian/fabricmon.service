@@ -7,4 +7,3 @@ ExecStart=/usr/bin/fabricmon --config=/etc/fabricmon.conf --daemonize
 
 [Install]
 WantedBy=multi-user.target
-Alias=fabricmon.service

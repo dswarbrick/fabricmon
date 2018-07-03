@@ -8,3 +8,6 @@ export DH_GOPKG := github.com/dswarbrick/fabricmon
 
 override_dh_auto_install:
 	dh_auto_install -- --no-source
+
+override_dh_installinit:
+	dh_installinit --noscripts
