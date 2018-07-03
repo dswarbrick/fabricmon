@@ -1,9 +1,9 @@
 Source: fabricmon
 Section: net
 Priority: optional
-Maintainer: Daniel Swarbrick <1667905+dswarbrick@users.noreply.github.com>
-Build-Depends: debhelper (>=9),
-               dh-golang (>=1.9),
+Maintainer: Daniel Swarbrick <dswarbrick@users.noreply.github.com>
+Build-Depends: debhelper (>=10),
+               dh-golang,
                dh-systemd,
                golang-github-burntsushi-toml-dev,
                golang-github-influxdb-influxdb-dev,
@@ -15,10 +15,10 @@ Build-Depends: debhelper (>=9),
                libibnetdisc-dev,
                libibumad-dev,
                libopensm-dev
-Standards-Version: 3.9.8
+Standards-Version: 4.1.2
 Homepage: https://github.com/dswarbrick/fabricmon
 Vcs-Browser: https://github.com/dswarbrick/fabricmon
-Vcs-Git: git@github.com:dswarbrick/fabricmon.git
+Vcs-Git: https://github.com/dswarbrick/fabricmon.git
 
 Package: fabricmon
 Architecture: any

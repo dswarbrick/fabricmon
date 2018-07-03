@@ -121,4 +121,4 @@ time                counter                     guid             hca    host    
 ## Future Plans
 
 * Subscribe to SM traps 128 (link state change) and 144 (port capabilities
-  change), to avoid performing full sweep upon each HTTP request.
+  change), to avoid performing full sweep upon poll.
