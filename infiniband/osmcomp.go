@@ -22,7 +22,7 @@ const DEFAULT_NODE_NAME_MAP = "/etc/opensm/ib-node-name-map"
 // The NodeNameMap type holds a mapping of a 64-bit GUID to an InfiniBand node name / description.
 type NodeNameMap struct {
 	nodes   map[uint64]string
-	lock    sync.Mutex
+	lock    sync.RWMutex
 	watcher *fsnotify.Watcher
 }
 
@@ -82,8 +82,8 @@ func NewNodeNameMap() (NodeNameMap, error) {
 // RemapNodeName attempts to map the specified GUID to a node description from the NodeNameMap. If
 // the GUID is not found in the map, the supplied node description is simply returned unmodified.
 func (n NodeNameMap) RemapNodeName(guid uint64, nodeDesc string) string {
-	n.lock.Lock()
-	defer n.lock.Unlock()
+	n.lock.RLock()
+	defer n.lock.RUnlock()
 
 	if mapDesc, ok := n.nodes[guid]; ok {
 		return mapDesc
