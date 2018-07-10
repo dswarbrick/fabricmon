@@ -24,6 +24,14 @@ type FabricmonConf struct {
 	Topology       TopologyConf
 }
 
+func (conf *FabricmonConf) validate() error {
+	if conf.ResetThreshold < 25 || conf.ResetThreshold > 100 {
+		return fmt.Errorf("counter_reset_threshold must be between 25 and 100")
+	}
+
+	return nil
+}
+
 // InfluxDBConf holds the configuration values for a single InfluxDB instance.
 type InfluxDBConf struct {
 	URL      string
@@ -45,7 +53,7 @@ type TopologyConf struct {
 func (conf *TopologyConf) validate() error {
 	if conf.Enabled {
 		if err := unix.Access(conf.OutputDir, unix.W_OK); err != nil {
-			return fmt.Errorf("Topology output directory: %s", err)
+			return fmt.Errorf("topology output directory: %s", err)
 		}
 	}
 
@@ -86,6 +94,10 @@ func ReadConfig(configFile string) (*FabricmonConf, error) {
 	}
 
 	if err := yaml.UnmarshalStrict(content, conf); err != nil {
+		return nil, err
+	}
+
+	if err := conf.validate(); err != nil {
 		return nil, err
 	}
 

@@ -4,7 +4,7 @@
 poll_interval: 10s
 
 # Percent of maximum counter threshold at which to reset counter (25 - 100 percent)
-counter_reset_threshold: 1
+counter_reset_threshold: 25
 
 logging:
   enable_syslog: true
