@@ -58,7 +58,7 @@ func router(input chan infiniband.Fabric, writers []writer.FabricWriter) {
 
 func main() {
 	var (
-		configFile = kingpin.Flag("config", "Path to config file.").Default("fabricmon.conf").String()
+		configFile = kingpin.Flag("config", "Path to config file.").Default("fabricmon.yml").String()
 		daemonize  = kingpin.Flag("daemonize", "Run forever, fetching counters periodically.").Default("true").Bool()
 	)
 

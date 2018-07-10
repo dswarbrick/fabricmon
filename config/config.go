@@ -6,18 +6,19 @@ package config
 
 import (
 	"fmt"
+	"io/ioutil"
 	"time"
 
 	"golang.org/x/sys/unix"
 
-	"github.com/BurntSushi/toml"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 // FabricmonConf is the main configuration struct for FabricMon.
 type FabricmonConf struct {
-	PollInterval   Duration `toml:"poll_interval"`
-	ResetThreshold uint     `toml:"counter_reset_threshold"`
+	PollInterval   time.Duration `yaml:"poll_interval"`
+	ResetThreshold uint          `yaml:"counter_reset_threshold"`
 	InfluxDB       []InfluxDBConf
 	Logging        LoggingConf
 	Topology       TopologyConf
@@ -32,13 +33,13 @@ type InfluxDBConf struct {
 }
 
 type LoggingConf struct {
-	EnableSyslog bool     `toml:"enable_syslog"`
-	LogLevel     LogLevel `toml:"log_level"`
+	EnableSyslog bool     `yaml:"enable_syslog"`
+	LogLevel     LogLevel `yaml:"log_level"`
 }
 
 type TopologyConf struct {
 	Enabled   bool
-	OutputDir string `toml:"output_dir"`
+	OutputDir string `yaml:"output_dir"`
 }
 
 func (conf *TopologyConf) validate() error {
@@ -51,34 +52,7 @@ func (conf *TopologyConf) validate() error {
 	return nil
 }
 
-// Duration is a TOML wrapper type for time.Duration.
-// See https://github.com/golang/go/issues/24174.
-type Duration time.Duration
-
-// String returns the string representation of the duration.
-func (d Duration) String() string {
-	return time.Duration(d).String()
-}
-
-// UnmarshalText parses a byte slice value into a time.Duration value.
-func (d *Duration) UnmarshalText(text []byte) error {
-	// Ignore if there is no value set.
-	if len(text) == 0 {
-		return nil
-	}
-
-	// Otherwise parse as a duration formatted string.
-	value, err := time.ParseDuration(string(text))
-	if err != nil {
-		return err
-	}
-
-	// Set duration and return.
-	*d = Duration(value)
-	return nil
-}
-
-// LogLevel is a TOML wrapper type for logrus.Level.
+// LogLevel is a wrapper type for logrus.Level.
 type LogLevel logrus.Level
 
 // String returns the string representation of the log level.
@@ -97,22 +71,26 @@ func (l *LogLevel) UnmarshalText(text []byte) error {
 	return err
 }
 
-func ReadConfig(configFile string) (FabricmonConf, error) {
+func ReadConfig(configFile string) (*FabricmonConf, error) {
+	content, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return nil, fmt.Errorf("error reading config file: %s", err)
+	}
+
 	// Defaults
-	conf := FabricmonConf{
-		PollInterval: Duration(time.Second * 10),
+	conf := &FabricmonConf{
+		PollInterval: time.Second * 10,
 		Logging: LoggingConf{
 			LogLevel: LogLevel(logrus.InfoLevel),
 		},
-		Topology: TopologyConf{},
 	}
 
-	if _, err := toml.DecodeFile(configFile, &conf); err != nil {
-		return conf, fmt.Errorf("Cannot open / parse config file: %s", err)
+	if err := yaml.UnmarshalStrict(content, conf); err != nil {
+		return nil, err
 	}
 
 	if err := conf.Topology.validate(); err != nil {
-		return conf, err
+		return nil, err
 	}
 
 	return conf, nil
