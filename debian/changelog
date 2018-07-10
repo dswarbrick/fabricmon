@@ -1,3 +1,9 @@
+fabricmon (0.0.4) stretch; urgency=medium
+
+  * Use yaml.Unmarshal(), since UnmarshalStrict() is not supported by stretch
+
+ -- Daniel Swarbrick <dswarbrick@users.noreply.github.com>  Tue, 10 Jul 2018 13:40:40 +0200
+
 fabricmon (0.0.3) stretch; urgency=medium
 
   * Honour counter_reset_threshold when walking standard counters
