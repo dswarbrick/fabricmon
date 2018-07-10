@@ -5,6 +5,7 @@ Maintainer: Daniel Swarbrick <dswarbrick@users.noreply.github.com>
 Build-Depends: debhelper (>=10),
                dh-golang,
                dh-systemd,
+               golang-github-fsnotify-fsnotify-dev,
                golang-github-influxdb-influxdb-dev,
                golang-github-sirupsen-logrus-dev,
                golang-go,

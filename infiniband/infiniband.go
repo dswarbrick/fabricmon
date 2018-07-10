@@ -14,6 +14,8 @@ import "C"
 
 import (
 	"fmt"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -178,5 +180,9 @@ func PortPhysStateToStr(state uint) string {
 }
 
 func init() {
-	nnMap, _ = NewNodeNameMap()
+	var err error
+
+	if nnMap, err = NewNodeNameMap(); err != nil {
+		log.WithError(err).Error("Cannot load node name map")
+	}
 }
