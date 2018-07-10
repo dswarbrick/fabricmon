@@ -117,7 +117,7 @@ func main() {
 
 	// First sweep.
 	for _, hca := range hcas {
-		hca.NetDiscover(nil)
+		hca.NetDiscover(nil, conf.ResetThreshold)
 	}
 
 	if *daemonize {
@@ -139,7 +139,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				for _, hca := range hcas {
-					hca.NetDiscover(splitter)
+					hca.NetDiscover(splitter, conf.ResetThreshold)
 				}
 			case <-shutdownChan:
 				log.Debug("Shutdown received in polling loop.")

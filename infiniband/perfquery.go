@@ -19,7 +19,7 @@ import (
 // Note: In PortCounters, PortCountersExtended, PortXmitDataSL, and PortRcvDataSL, components that
 // represent Data (e.g. PortXmitData and PortRcvData) indicate octets divided by 4 rather than just
 // octets.
-func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibmad_port) (map[uint32]interface{}, error) {
+func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibmad_port, resetThreshold uint) (map[uint32]interface{}, error) {
 	var buf [1024]byte
 
 	counters := make(map[uint32]interface{})
@@ -48,8 +48,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 
 			counters[field] = uint32(C.mad_get_field(unsafe.Pointer(&buf), 0, field))
 
-			// FIXME: Honour the counter_reset_threshold value in config
-			if float64(counters[field].(uint32)) > (float64(counter.Limit) * 0.1) {
+			if float64(counters[field].(uint32)) > (float64(counter.Limit) * float64(resetThreshold) / 100) {
 				log.Warnf("Port %d counter %s (%d) exceeds threshold",
 					portNum, counter.Name, counters[field])
 				selMask |= counter.Select
@@ -87,7 +86,7 @@ func getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort *C.struct_ibm
 	return counters, nil
 }
 
-func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
+func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port, resetThreshold uint) []Port {
 	var portid C.ib_portid_t
 
 	log.Debugf("Node type: %d, node descr: %s, num. ports: %d, node GUID: %#016x",
@@ -192,7 +191,7 @@ func walkPorts(node *C.struct_ibnd_node, mad_port *C.struct_ibmad_port) []Port {
 					}
 				*/
 
-				if counters, err := getPortCounters(&portid, portNum, mad_port); err == nil {
+				if counters, err := getPortCounters(&portid, portNum, mad_port, resetThreshold); err == nil {
 					myPort.Counters = counters
 				} else {
 					log.WithError(err).WithFields(log.Fields{"port": portNum}).

@@ -26,7 +26,7 @@ type HCA struct {
 	umad_ca *C.umad_ca_t
 }
 
-func (h *HCA) NetDiscover(output chan Fabric) {
+func (h *HCA) NetDiscover(output chan Fabric, resetThreshold uint) {
 	var (
 		totalNodes, totalPorts int
 	)
@@ -64,7 +64,7 @@ func (h *HCA) NetDiscover(output chan Fabric) {
 		mad_port := C.mad_rpc_open_port(&h.umad_ca.ca_name[0], umad_port.portnum, &mgmt_classes[0], C.int(len(mgmt_classes)))
 
 		if mad_port != nil {
-			nodes := walkFabric(fabric, mad_port)
+			nodes := walkFabric(fabric, mad_port, resetThreshold)
 			C.mad_rpc_close_port(mad_port)
 
 			totalNodes += len(nodes)
@@ -130,7 +130,7 @@ func GetCAs() []HCA {
 	return hcas
 }
 
-func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []Node {
+func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port, resetThreshold uint) []Node {
 	nodes := make([]Node, 0)
 
 	for node := fabric.nodes; node != nil; node = node.next {
@@ -143,7 +143,7 @@ func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port) []N
 		}
 
 		if node._type == C.IB_NODE_SWITCH {
-			myNode.Ports = walkPorts(node, mad_port)
+			myNode.Ports = walkPorts(node, mad_port, resetThreshold)
 		}
 
 		nodes = append(nodes, myNode)
