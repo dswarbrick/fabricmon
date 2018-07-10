@@ -1,8 +1,14 @@
+fabricmon (0.0.3) stretch; urgency=medium
+
+  * Honour counter_reset_threshold when walking standard counters
+
+ -- Daniel Swarbrick <dswarbrick@users.noreply.github.com>  Tue, 10 Jul 2018 13:31:13 +0200
+
 fabricmon (0.0.2) stretch; urgency=medium
 
   * Migrate config file format to YAML
 
- -- Daniel Swarbrick <dswarbrick@user.noreply.github.com>  Tue, 10 Jul 2018 13:14:05 +0200
+ -- Daniel Swarbrick <dswarbrick@users.noreply.github.com>  Tue, 10 Jul 2018 13:14:05 +0200
 
 fabricmon (0.0.1) stretch; urgency=low
 
