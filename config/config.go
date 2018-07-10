@@ -93,7 +93,7 @@ func ReadConfig(configFile string) (*FabricmonConf, error) {
 		},
 	}
 
-	if err := yaml.UnmarshalStrict(content, conf); err != nil {
+	if err := yaml.Unmarshal(content, conf); err != nil {
 		return nil, err
 	}
 
