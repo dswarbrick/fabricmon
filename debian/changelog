@@ -1,3 +1,9 @@
+fabricmon (0.0.6) stretch; urgency=medium
+
+  * Implement fsnotify watch for IB node name map
+
+ -- Daniel Swarbrick <dswarbrick@users.noreply.github.com>  Wed, 11 Jul 2018 18:24:30 +0200
+
 fabricmon (0.0.5) stretch; urgency=medium
 
   * Fix wrong config filename in systemd service
