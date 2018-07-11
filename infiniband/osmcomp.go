@@ -43,6 +43,7 @@ func NewNodeNameMap() (NodeNameMap, error) {
 		}
 	} else {
 		log.WithError(err).Error("Cannot create fsnotify watcher")
+		return n, err
 	}
 
 	go func() {
@@ -54,11 +55,11 @@ func NewNodeNameMap() (NodeNameMap, error) {
 					break
 				}
 
-				log.Infof("nodenamemap watcher event: %s", event.Op)
+				log.Infof("NodeNameMap watcher event: %s", event.Op)
 
 				if event.Op == fsnotify.Remove {
 					if err := n.watcher.Add(DEFAULT_NODE_NAME_MAP); err != nil {
-						log.WithError(err).Error("Cannot re-add fsnotify watch for node name map")
+						log.WithError(err).Error("Cannot re-add fsnotify watcher for node name map")
 					}
 				} else {
 					if err := n.reload(); err != nil {
@@ -70,7 +71,7 @@ func NewNodeNameMap() (NodeNameMap, error) {
 
 			case err := <-n.watcher.Errors:
 				if err != nil {
-					log.WithError(err).Error("Error watching file")
+					log.WithError(err).Error("Error watching node name map")
 				}
 			}
 		}
