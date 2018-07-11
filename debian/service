@@ -3,7 +3,7 @@ Description=FabricMon is an InfiniBand performance monitoring daemon
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/fabricmon --config=/etc/fabricmon.conf --daemonize
+ExecStart=/usr/bin/fabricmon --config=/etc/fabricmon.yml --daemonize
 
 [Install]
 WantedBy=multi-user.target
