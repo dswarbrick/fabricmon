@@ -42,8 +42,7 @@ type InfluxDBConf struct {
 }
 
 type LoggingConf struct {
-	EnableSyslog bool     `yaml:"enable_syslog"`
-	LogLevel     LogLevel `yaml:"log_level"`
+	LogLevel LogLevel `yaml:"log_level"`
 }
 
 type TopologyConf struct {

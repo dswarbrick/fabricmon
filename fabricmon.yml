@@ -7,7 +7,6 @@ poll_interval: 30s
 counter_reset_threshold: 80
 
 logging:
-  enable_syslog: false
   log_level: info
 
 # d3.js JSON topology dumps for FabricMon web UI

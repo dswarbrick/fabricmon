@@ -11,7 +11,6 @@ package main
 
 import (
 	"fmt"
-	"log/syslog"
 	"os"
 	"os/signal"
 	"time"
@@ -19,7 +18,6 @@ import (
 	"golang.org/x/sys/unix"
 
 	log "github.com/sirupsen/logrus"
-	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -83,16 +81,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if conf.Logging.EnableSyslog {
-		log.SetFormatter(&log.TextFormatter{DisableColors: true, DisableTimestamp: true})
-
-		if hook, err := lSyslog.NewSyslogHook("", "", syslog.LOG_INFO, ""); err == nil {
-			log.AddHook(hook)
-		}
-	} else {
-		log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
-	}
-
+	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 	log.SetLevel(log.Level(conf.Logging.LogLevel))
 	log.Info("FabricMon ", version.Info())
 
