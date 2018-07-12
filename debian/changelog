@@ -1,3 +1,10 @@
+fabricmon (0.0.7) stretch; urgency=medium
+
+  * Minor InfluxDBWriter refactoring
+  * Minor logging refactoring
+
+ -- Daniel Swarbrick <dswarbrick@users.noreply.github.com>  Thu, 12 Jul 2018 13:14:40 +0200
+
 fabricmon (0.0.6) stretch; urgency=medium
 
   * Implement fsnotify watch for IB node name map
