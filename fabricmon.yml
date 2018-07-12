@@ -21,8 +21,10 @@ influxdb:
 #  database: fabricmon
 #  username: fabricmon
 #  password: fabricmon
+#  retention_policy: autogen
 
 #- url: http://influxdb2.example.com:8086
 #  database: fabricmon
 #  username: fabricmon
 #  password: fabricmon
+#  retention_policy: autogen

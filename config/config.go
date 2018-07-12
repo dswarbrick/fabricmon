@@ -34,10 +34,11 @@ func (conf *FabricmonConf) validate() error {
 
 // InfluxDBConf holds the configuration values for a single InfluxDB instance.
 type InfluxDBConf struct {
-	URL      string
-	Database string
-	Username string
-	Password string
+	URL             string
+	Database        string
+	Username        string
+	Password        string
+	RetentionPolicy string `yaml:"retention_policy"`
 }
 
 type LoggingConf struct {

@@ -122,7 +122,7 @@ func main() {
 
 	if *daemonize {
 		for _, c := range conf.InfluxDB {
-			w := &influxdb.InfluxDBWriter{Config: c}
+			w := influxdb.NewInfluxDBWriter(c)
 			writers = append(writers, w)
 		}
 

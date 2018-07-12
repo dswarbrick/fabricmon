@@ -19,8 +19,17 @@ import (
 	"github.com/dswarbrick/fabricmon/infiniband"
 )
 
+const (
+	// TODO: Consider making this configurable
+	measurementName = "fabricmon_counters"
+)
+
 type InfluxDBWriter struct {
-	Config config.InfluxDBConf
+	config config.InfluxDBConf
+}
+
+func NewInfluxDBWriter(config config.InfluxDBConf) *InfluxDBWriter {
+	return &InfluxDBWriter{config: config}
 }
 
 // TODO: Rename this to something more descriptive (and which is not so easily confused with method
@@ -28,9 +37,9 @@ type InfluxDBWriter struct {
 func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 	// InfluxDB client opens connections on demand, so we can preemptively create it here.
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     w.Config.URL,
-		Username: w.Config.Username,
-		Password: w.Config.Password,
+		Addr:     w.config.URL,
+		Username: w.config.Username,
+		Password: w.config.Password,
 	})
 
 	if err != nil {
@@ -42,13 +51,14 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 		log.WithFields(log.Fields{"version": version, "rtt": rtt}).Infof("InfluxDB ping reply")
 	}
 
+	// Loop indefinitely until input chan closed.
 	for fabric := range input {
 		if batch, err := w.makeBatch(fabric); err == nil {
 			log.WithFields(log.Fields{
 				"hca":    fabric.CAName,
 				"port":   fabric.SourcePort,
 				"points": len(batch.Points()),
-			}).Infof("InfluxDB batch created")
+			}).Debugf("InfluxDB batch created")
 
 			if err := c.Write(batch); err != nil {
 				log.Error(err)
@@ -64,8 +74,9 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 
 func (w *InfluxDBWriter) makeBatch(fabric infiniband.Fabric) (client.BatchPoints, error) {
 	batch, err := client.NewBatchPoints(client.BatchPointsConfig{
-		Database:  w.Config.Database,
-		Precision: "s",
+		Database:        w.config.Database,
+		RetentionPolicy: w.config.RetentionPolicy,
+		Precision:       "s",
 	})
 
 	if err != nil {
@@ -100,7 +111,7 @@ func (w *InfluxDBWriter) makeBatch(fabric infiniband.Fabric) (client.BatchPoints
 					tags["counter"] = infiniband.ExtCounterMap[counter].Name
 					// InfluxDB Client docs erroneously claim that "uint64 data type is
 					// supported if your server is version 1.4.0 or greater."
-					// In fact, uint64 support will not land until InfluxDB 1.6.
+					// In fact, uint64 support has still not landed as of InfluxDB 1.6.
 					// (https://github.com/influxdata/influxdb/pull/8923)
 					// Workaround is to convert to int64 (i.e., truncate to 63 bits).
 					fields["value"] = int64(v & 0x7fffffffffffffff)
@@ -108,7 +119,7 @@ func (w *InfluxDBWriter) makeBatch(fabric infiniband.Fabric) (client.BatchPoints
 					continue
 				}
 
-				if point, err := client.NewPoint("fabricmon_counters", tags, fields, now); err == nil {
+				if point, err := client.NewPoint(measurementName, tags, fields, now); err == nil {
 					batch.AddPoint(point)
 				}
 			}
