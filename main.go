@@ -81,7 +81,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 	log.SetLevel(log.Level(conf.Logging.LogLevel))
 	log.Info("FabricMon ", version.Info())
 
