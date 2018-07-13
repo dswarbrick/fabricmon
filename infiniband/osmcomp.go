@@ -82,7 +82,7 @@ func NewNodeNameMap() (NodeNameMap, error) {
 
 // RemapNodeName attempts to map the specified GUID to a node description from the NodeNameMap. If
 // the GUID is not found in the map, the supplied node description is simply returned unmodified.
-func (n NodeNameMap) RemapNodeName(guid uint64, nodeDesc string) string {
+func (n *NodeNameMap) RemapNodeName(guid uint64, nodeDesc string) string {
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
@@ -92,7 +92,7 @@ func (n NodeNameMap) RemapNodeName(guid uint64, nodeDesc string) string {
 	return nodeDesc
 }
 
-func (n NodeNameMap) reload() error {
+func (n *NodeNameMap) reload() error {
 	nodes := make(map[uint64]string)
 
 	file, err := os.Open(DEFAULT_NODE_NAME_MAP)
@@ -143,5 +143,6 @@ func (n NodeNameMap) reload() error {
 	n.lock.Lock()
 	n.nodes = nodes
 	n.lock.Unlock()
+
 	return nil
 }
