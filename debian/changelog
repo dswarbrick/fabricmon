@@ -1,3 +1,11 @@
+fabricmon (0.1.0) stretch; urgency=medium
+
+  * Refactor logging to use context loggers
+  * Internal refactoring
+  * Write node description to InfluxDB as a tag
+
+ -- Daniel Swarbrick <dswarbrick@users.noreply.github.com>  Fri, 13 Jul 2018 16:38:12 +0200
+
 fabricmon (0.0.7) stretch; urgency=medium
 
   * Minor InfluxDBWriter refactoring
