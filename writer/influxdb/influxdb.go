@@ -98,6 +98,7 @@ func (w *InfluxDBWriter) makeBatch(fabric infiniband.Fabric) (client.BatchPoints
 		}
 
 		tags["guid"] = fmt.Sprintf("%016x", node.GUID)
+		tags["node_desc"] = node.NodeDesc
 
 		for portNum, port := range node.Ports {
 			tags["port"] = strconv.Itoa(portNum)

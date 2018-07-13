@@ -235,7 +235,7 @@ func (n *ibndNode) simpleNode() Node {
 	node := Node{
 		GUID:     n.guid(),
 		NodeType: int(n.ibnd_node._type),
-		NodeDesc: n.nodeDesc(),
+		NodeDesc: nnMap.RemapNodeName(n.guid(), n.nodeDesc()),
 		VendorID: uint(C.mad_get_field(unsafe.Pointer(&n.ibnd_node.info), 0, C.IB_NODE_VENDORID_F)),
 		DeviceID: uint(C.mad_get_field(unsafe.Pointer(&n.ibnd_node.info), 0, C.IB_NODE_DEVID_F)),
 	}
