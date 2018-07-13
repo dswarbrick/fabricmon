@@ -50,7 +50,7 @@ func (h *HCA) NetDiscover(output chan Fabric, resetThreshold uint) {
 		config := C.ibnd_config_t{flags: C.IBND_CONFIG_MLX_EPI}
 
 		// NOTE: Under ibsim, this will fail after a certain number of iterations with a
-		// mad_rpc_open_port() errors (presumably due to a resource leak in ibsim).
+		// mad_rpc_open_port() error (presumably due to a resource leak in ibsim).
 		// ibnd_fabric_t *ibnd_discover_fabric(char *ca_name, int ca_port, ib_portid_t *from, ibnd_config_t *config)
 		fabric, err := C.ibnd_discover_fabric(&h.umad_ca.ca_name[0], umad_port.portnum, nil, &config)
 
@@ -130,20 +130,181 @@ func GetCAs() []HCA {
 	return hcas
 }
 
+type ibndNode struct {
+	ibnd_node *C.struct_ibnd_node
+}
+
+func (n *ibndNode) guid() uint64 {
+	return uint64(n.ibnd_node.guid)
+}
+
+func (n *ibndNode) guidString() string {
+	return fmt.Sprintf("%#016x", n.ibnd_node.guid)
+}
+
+func (n *ibndNode) nodeDesc() string {
+	return C.GoString(&n.ibnd_node.nodedesc[0])
+}
+
+// simpleNode returns a Node structure, containing only safe Go types, suitable for asynchronous
+// access, even if the original fabric pointers have been freed.
+func (n *ibndNode) simpleNode() Node {
+	if n.ibnd_node == nil {
+		return Node{}
+	}
+
+	node := Node{
+		GUID:     n.guid(),
+		NodeType: int(n.ibnd_node._type),
+		NodeDesc: n.nodeDesc(),
+		VendorID: uint(C.mad_get_field(unsafe.Pointer(&n.ibnd_node.info), 0, C.IB_NODE_VENDORID_F)),
+		DeviceID: uint(C.mad_get_field(unsafe.Pointer(&n.ibnd_node.info), 0, C.IB_NODE_DEVID_F)),
+	}
+
+	return node
+}
+
+func (n *ibndNode) walkPorts(mad_port *C.struct_ibmad_port, resetThreshold uint) []Port {
+	var portid C.ib_portid_t
+
+	log.WithFields(log.Fields{
+		"node_type": n.ibnd_node._type,
+		"node_desc": nnMap.RemapNodeName(n.guid(), n.nodeDesc()),
+		"num_ports": n.ibnd_node.numports,
+		"node_guid": n.guidString(),
+	}).Debug("Walking ports for node")
+
+	ports := make([]Port, n.ibnd_node.numports+1)
+
+	C.ib_portid_set(&portid, C.int(n.ibnd_node.smalid), 0, 0)
+
+	// node.ports is an array of ports, indexed by port number:
+	//   ports[1] == port 1,
+	//   ports[2] == port 2,
+	//   etc...
+	// Any port in the array MAY BE NIL! Most notably, non-switches have no port zero, therefore
+	// ports[0] == nil for those nodes!
+	arrayPtr := uintptr(unsafe.Pointer(n.ibnd_node.ports))
+
+	for portNum := 0; portNum <= int(n.ibnd_node.numports); portNum++ {
+		var (
+			info         *[C.IB_SMP_DATA_SIZE]C.uchar
+			linkSpeedExt uint
+		)
+
+		// Get pointer to port struct at portNum array offset
+		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr + unsafe.Sizeof(arrayPtr)*uintptr(portNum)))
+
+		myPort := Port{GUID: uint64(pp.guid)}
+
+		portState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_STATE_F)
+		physState := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_PHYS_STATE_F)
+
+		// C14-24.2.1 states that a down port allows for invalid data to be returned for all
+		// PortInfo components except PortState and PortPhysicalState.
+		if portState == C.IB_LINK_DOWN {
+			ports[portNum] = myPort
+			continue
+		}
+
+		linkWidth := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_ACTIVE_F)
+		myPort.LinkWidth = LinkWidthToStr(uint(linkWidth))
+
+		// Check for extended speed support
+		if n.ibnd_node._type == C.IB_NODE_SWITCH {
+			info = &(*(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr))).info
+		} else {
+			info = &pp.info
+		}
+
+		capMask := htonl(uint32(C.mad_get_field(unsafe.Pointer(info), 0, C.IB_PORT_CAPMASK_F)))
+		if capMask&C.IB_PORT_CAP_HAS_EXT_SPEEDS != 0 {
+			linkSpeedExt = uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_EXT_ACTIVE_F))
+		}
+
+		if linkSpeedExt > 0 {
+			myPort.LinkSpeed = LinkSpeedExtToStr(linkSpeedExt)
+		} else {
+			fdr10 := C.mad_get_field(unsafe.Pointer(&pp.ext_info), 0, C.IB_MLNX_EXT_PORT_LINK_SPEED_ACTIVE_F) & C.FDR10
+
+			if fdr10 != 0 {
+				myPort.LinkSpeed = "FDR10"
+			} else {
+				linkSpeed := C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_ACTIVE_F)
+				myPort.LinkSpeed = LinkSpeedToStr(uint(linkSpeed))
+			}
+		}
+
+		log.WithFields(log.Fields{
+			"node_desc":  nnMap.RemapNodeName(n.guid(), n.nodeDesc()),
+			"node_guid":  n.guidString(),
+			"port":       portNum,
+			"port_state": PortStateToStr(uint(portState)),
+			"phys_state": PortPhysStateToStr(uint(physState)),
+			"link_width": myPort.LinkWidth,
+			"link_speed": myPort.LinkSpeed,
+		}).Debugf("Port info")
+
+		// Remote port may be nil if port state is polling / armed.
+		rp := pp.remoteport
+
+		if rp != nil {
+			myPort.RemoteGUID = uint64(rp.node.guid)
+
+			// Port counters will only be fetched if port is ACTIVE + LINKUP
+			if (portState == C.IB_LINK_ACTIVE) && (physState == C.IB_PORT_PHYS_STATE_LINKUP) {
+				// Determine max width supported by both ends
+				maxWidth := maxPow2Divisor(
+					uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)),
+					uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)))
+
+				if uint(linkWidth) != maxWidth {
+					log.Warnf("Node %s (%s) port %d link width is not the max width supported by both ports",
+						n.nodeDesc(), n.guidString(), portNum)
+				}
+
+				// Determine max speed supported by both ends
+				// TODO: Check for possible FDR10 support (ext_info IB_MLNX_EXT_PORT_LINK_SPEED_SUPPORTED_F)
+				// TODO: Check for possible extended speed (info IB_PORT_LINK_SPEED_EXT_SUPPORTED_F)
+				/*
+					maxSpeed := maxPow2Divisor(
+						uint(C.mad_get_field(unsafe.Pointer(&pp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)),
+						uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_SPEED_SUPPORTED_F)))
+
+					if uint(linkSpeed) != maxSpeed {
+						log.Warnf("Port %d link speed is not the max speed supported by both ports",
+							portNum)
+					}
+				*/
+
+				if counters, err := getPortCounters(&portid, portNum, mad_port, resetThreshold); err == nil {
+					myPort.Counters = counters
+				} else {
+					log.WithError(err).WithFields(log.Fields{
+						"node_desc": nnMap.RemapNodeName(n.guid(), n.nodeDesc()),
+						"node_guid": n.guidString(),
+						"port":      portNum,
+					}).Error("Cannot get counters for port")
+				}
+			}
+		}
+
+		ports[portNum] = myPort
+	}
+
+	return ports
+}
+
 func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port, resetThreshold uint) []Node {
 	nodes := make([]Node, 0)
 
 	for node := fabric.nodes; node != nil; node = node.next {
-		myNode := Node{
-			GUID:     uint64(node.guid),
-			NodeType: int(node._type),
-			NodeDesc: C.GoString(&node.nodedesc[0]),
-			VendorID: uint(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_VENDORID_F)),
-			DeviceID: uint(C.mad_get_field(unsafe.Pointer(&node.info), 0, C.IB_NODE_DEVID_F)),
-		}
+		n := ibndNode{node}
 
-		if node._type == C.IB_NODE_SWITCH {
-			myNode.Ports = walkPorts(node, mad_port, resetThreshold)
+		myNode := n.simpleNode()
+
+		if n.ibnd_node._type == C.IB_NODE_SWITCH {
+			myNode.Ports = n.walkPorts(mad_port, resetThreshold)
 		}
 
 		nodes = append(nodes, myNode)
