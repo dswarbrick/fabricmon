@@ -1,5 +1,5 @@
 BINARY_NAME := fabricmon
-VERSION := 0.0.7
+VERSION := 0.1.1
 BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 REVISION = $(shell git rev-parse HEAD)
 
