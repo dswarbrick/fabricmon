@@ -23,16 +23,17 @@ var nnMap NodeNameMap
 
 // The NodeNameMap type holds a mapping of a 64-bit GUID to an InfiniBand node name / description.
 type NodeNameMap struct {
-	nodes   map[uint64]string
-	lock    sync.RWMutex
-	watcher *fsnotify.Watcher
+	filePath string
+	nodes    map[uint64]string
+	lock     sync.RWMutex
+	watcher  *fsnotify.Watcher
 }
 
 // NewNodeNameMap opens and parses the SM node name map, returning a NodeNameMap of GUIDs and their
 // node descriptions. The format of the node name map file is described in man page
 // ibnetdiscover(8).
-func NewNodeNameMap() (NodeNameMap, error) {
-	n := NodeNameMap{}
+func NewNodeNameMap(filePath string) (NodeNameMap, error) {
+	n := NodeNameMap{filePath: filePath}
 
 	if err := n.reload(); err != nil {
 		return n, err
@@ -40,7 +41,7 @@ func NewNodeNameMap() (NodeNameMap, error) {
 
 	if watcher, err := fsnotify.NewWatcher(); err == nil {
 		n.watcher = watcher
-		if err := n.watcher.Add(DEFAULT_NODE_NAME_MAP); err != nil {
+		if err := n.watcher.Add(n.filePath); err != nil {
 			log.WithError(err).Error("Cannot add fsnotify watch for node name map")
 		}
 	} else {
@@ -60,7 +61,7 @@ func NewNodeNameMap() (NodeNameMap, error) {
 				log.Infof("NodeNameMap watcher event: %s", event.Op)
 
 				if event.Op == fsnotify.Remove {
-					if err := n.watcher.Add(DEFAULT_NODE_NAME_MAP); err != nil {
+					if err := n.watcher.Add(n.filePath); err != nil {
 						log.WithError(err).Error("Cannot re-add fsnotify watcher for node name map")
 					}
 				} else {
@@ -97,7 +98,7 @@ func (n *NodeNameMap) RemapNodeName(guid uint64, nodeDesc string) string {
 func (n *NodeNameMap) reload() error {
 	nodes := make(map[uint64]string)
 
-	file, err := os.Open(DEFAULT_NODE_NAME_MAP)
+	file, err := os.Open(n.filePath)
 	if err != nil {
 		return err
 	}
@@ -152,7 +153,7 @@ func (n *NodeNameMap) reload() error {
 func init() {
 	var err error
 
-	if nnMap, err = NewNodeNameMap(); err != nil {
+	if nnMap, err = NewNodeNameMap(DEFAULT_NODE_NAME_MAP); err != nil {
 		log.WithError(err).Error("Cannot load node name map")
 	}
 }
