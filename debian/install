@@ -1,1 +1,2 @@
-fabricmon.yml etc
+fabricmon.yml etc/fabricmon
+webui/* usr/share/fabricmon
