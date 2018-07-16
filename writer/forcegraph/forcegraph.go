@@ -101,7 +101,9 @@ func writeTopology(outputDir string, fabric infiniband.Fabric) error {
 		return err
 	}
 
+	tempFile.Chmod(0644)
 	tempFile.Close()
+
 	destFile := fmt.Sprintf("%s-%s-p%d.json", fabric.Hostname, fabric.CAName, fabric.SourcePort)
 
 	if err := os.Rename(tempFile.Name(), filepath.Join(outputDir, destFile)); err != nil {
