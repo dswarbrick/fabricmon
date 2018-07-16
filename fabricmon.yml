@@ -12,17 +12,11 @@ logging:
 # d3.js JSON topology dumps for FabricMon web UI
 topology:
   enabled: false
-  output_dir: /var/www/fabricmon
+  output_dir: /var/lib/fabricmon
 
 # Optional InfluxDB instance(s) to write metrics to.
 influxdb:
 #- url: http://influxdb1.example.com:8086
-#  database: fabricmon
-#  username: fabricmon
-#  password: fabricmon
-#  retention_policy: autogen
-
-#- url: http://influxdb2.example.com:8086
 #  database: fabricmon
 #  username: fabricmon
 #  password: fabricmon
