@@ -1,3 +1,10 @@
+fabricmon (0.1.2) stretch; urgency=medium
+
+  * Move default config location to /etc/fabricmon
+  * Include web UI chrome in package
+
+ -- Daniel Swarbrick <dswarbrick@users.noreply.github.com>  Mon, 16 Jul 2018 13:59:55 +0200
+
 fabricmon (0.1.1) stretch; urgency=medium
 
   * Eliminate unnecessary node name map lookup in ForceGraphWriter
