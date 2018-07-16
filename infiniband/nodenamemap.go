@@ -1,7 +1,7 @@
 // Copyright 2017-18 Daniel Swarbrick. All rights reserved.
 // Use of this source code is governed by a GPL license that can be found in the LICENSE file.
 
-// Functions analogous to libosmcomp.
+// Go implementation of InfiniBand node name map lookup functions.
 
 package infiniband
 
@@ -18,6 +18,8 @@ import (
 )
 
 const DEFAULT_NODE_NAME_MAP = "/etc/opensm/ib-node-name-map"
+
+var nnMap NodeNameMap
 
 // The NodeNameMap type holds a mapping of a 64-bit GUID to an InfiniBand node name / description.
 type NodeNameMap struct {
@@ -145,4 +147,12 @@ func (n *NodeNameMap) reload() error {
 	n.lock.Unlock()
 
 	return nil
+}
+
+func init() {
+	var err error
+
+	if nnMap, err = NewNodeNameMap(); err != nil {
+		log.WithError(err).Error("Cannot load node name map")
+	}
 }

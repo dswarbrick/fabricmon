@@ -57,15 +57,13 @@ func (fg *ForceGraphWriter) Receiver(input chan infiniband.Fabric) {
 // buildTopology transforms the internal representation of InfiniBand nodes into d3.js nodes and
 // links.
 func buildTopology(nodes []infiniband.Node) d3Topology {
-	nnMap, _ := infiniband.NewNodeNameMap()
-
 	topo := d3Topology{}
 
 	for _, node := range nodes {
 		d3n := d3Node{
 			ID:       fmt.Sprintf("%016x", node.GUID),
 			NodeType: node.NodeType,
-			Desc:     nnMap.RemapNodeName(node.GUID, node.NodeDesc),
+			Desc:     node.NodeDesc,
 			VendorID: node.VendorID,
 			DeviceID: node.DeviceID,
 		}

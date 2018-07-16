@@ -14,8 +14,6 @@ import "C"
 
 import (
 	"fmt"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -53,10 +51,6 @@ type Counter struct {
 	Limit  uint64
 	Select uint32 // CounterSelect (bits 0-15), CounterSelect2 (bits 16-23)
 }
-
-var (
-	nnMap NodeNameMap
-)
 
 // Standard (32-bit) counters and their display names.
 // Counter lengths and field selects defined in IBTA spec v1.3, table 247 (PortCounters).
@@ -177,12 +171,4 @@ func PortPhysStateToStr(state uint) string {
 	}
 
 	return fmt.Sprintf("undefined (%d)", state)
-}
-
-func init() {
-	var err error
-
-	if nnMap, err = NewNodeNameMap(); err != nil {
-		log.WithError(err).Error("Cannot load node name map")
-	}
 }
