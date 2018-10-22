@@ -1,3 +1,10 @@
+fabricmon (0.1.3) stretch; urgency=medium
+
+  * Add sysv init script
+  * Add additional device IDs to lookup table in web UI
+
+ -- Daniel Swarbrick <dswarbrick@users.noreply.github.com>  Mon, 22 Oct 2018 11:27:33 +0200
+
 fabricmon (0.1.2) stretch; urgency=medium
 
   * Move default config location to /etc/fabricmon
