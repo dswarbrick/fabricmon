@@ -23,14 +23,9 @@ Vcs-Git: https://github.com/dswarbrick/fabricmon.git
 
 Package: fabricmon
 Architecture: any
-Depends: libibmad5,
-         libibnetdisc5,
-         libibumad3,
-         libosmcomp3,
-         ${misc:Depends},
-         ${shlibs:Depends}
+Depends: daemon | systemd-sysv, ${misc:Depends}, ${shlibs:Depends}
 Built-Using: ${misc:Built-Using}
 Description: InfiniBand performance monitoring daemon
  FabricMon is an InfiniBand performance monitoring daemon written in Go. It
  uses cgo to interface with the OFED C libraries and sends MAD datagrams to
- obtain perf / error counters from all switchports in a fabric.
+ obtain performance / error counters from all switchports in a fabric.
