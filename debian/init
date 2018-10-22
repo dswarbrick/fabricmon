@@ -18,7 +18,7 @@ DESC="FabricMon InfiniBand monitoring daemon"
 DAEMON=/usr/bin/fabricmon
 NAME=fabricmon
 
-ARGS=""
+ARGS="--config=/etc/fabricmon/fabricmon.yml --daemonize"
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
 
 HELPER=/usr/bin/daemon
