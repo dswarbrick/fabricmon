@@ -10,7 +10,7 @@ import (
 
 var (
 	// Expected nodes after parsing node name map
-	nodes = map[uint64]string {
+	nodes = map[uint64]string{
 		0xb7c31c3b29d0c791: "ibsw1(root-sw)",
 		0xa31de6b2f83b0a91: "ibsw2",
 		0x4878ef07ca6bf2a0: "\"sw1 - root\"",

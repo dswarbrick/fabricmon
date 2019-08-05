@@ -21,3 +21,4 @@ influxdb:
 #  username: fabricmon
 #  password: fabricmon
 #  retention_policy: autogen
+#  timeout: 10s

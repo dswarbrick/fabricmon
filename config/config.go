@@ -39,6 +39,7 @@ type InfluxDBConf struct {
 	Username        string
 	Password        string
 	RetentionPolicy string `yaml:"retention_policy"`
+	Timeout         time.Duration
 }
 
 type LoggingConf struct {

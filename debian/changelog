@@ -1,3 +1,11 @@
+fabricmon (0.1.5) stretch buster; urgency=medium
+
+  * Add timeout option in InfluxDB batch writer
+  * Set HTTP user agent in InfluxDB batch writer
+  * Add buster build
+
+ -- Daniel Swarbrick <dswarbrick@users.noreply.github.com>  Mon, 05 Aug 2019 17:45:37 +0200
+
 fabricmon (0.1.4) stretch; urgency=medium
 
   * Add missing args to sysv init script

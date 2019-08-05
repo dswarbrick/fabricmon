@@ -29,6 +29,10 @@ type InfluxDBWriter struct {
 }
 
 func NewInfluxDBWriter(config config.InfluxDBConf) *InfluxDBWriter {
+	if config.Timeout == 0 {
+		config.Timeout = 10 * time.Second
+	}
+
 	return &InfluxDBWriter{config: config}
 }
 
@@ -37,9 +41,11 @@ func NewInfluxDBWriter(config config.InfluxDBConf) *InfluxDBWriter {
 func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 	// InfluxDB client opens connections on demand, so we can preemptively create it here.
 	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     w.config.URL,
-		Username: w.config.Username,
-		Password: w.config.Password,
+		Addr:      w.config.URL,
+		Username:  w.config.Username,
+		Password:  w.config.Password,
+		Timeout:   w.config.Timeout,
+		UserAgent: "FabricMon",
 	})
 
 	if err != nil {
@@ -61,7 +67,7 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 			}).Debugf("InfluxDB batch created")
 
 			if err := c.Write(batch); err != nil {
-				log.Error(err)
+				log.WithError(err).Error("InfluxDB batch write error")
 			}
 		} else {
 			log.Error(err)
