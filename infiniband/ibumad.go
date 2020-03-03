@@ -59,7 +59,7 @@ func getCANames() ([]string, error) {
 // of the openat() syscall.
 func umadGetCANames() []string {
 	var (
-		buf  [C.UMAD_CA_NAME_LEN][C.UMAD_MAX_DEVICES]byte
+		buf  [C.UMAD_MAX_DEVICES][C.UMAD_CA_NAME_LEN]byte
 		hcas = make([]string, 0, C.UMAD_MAX_DEVICES)
 	)
 
