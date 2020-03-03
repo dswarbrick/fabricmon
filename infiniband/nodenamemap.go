@@ -19,7 +19,7 @@ import (
 
 const DEFAULT_NODE_NAME_MAP = "/etc/opensm/ib-node-name-map"
 
-var nnMap NodeNameMap
+var nnMap *NodeNameMap
 
 // The NodeNameMap type holds a mapping of a 64-bit GUID to an InfiniBand node name / description.
 type NodeNameMap struct {
@@ -32,8 +32,8 @@ type NodeNameMap struct {
 // NewNodeNameMap opens and parses the SM node name map, returning a NodeNameMap of GUIDs and their
 // node descriptions. The format of the node name map file is described in man page
 // ibnetdiscover(8).
-func NewNodeNameMap(filePath string) (NodeNameMap, error) {
-	n := NodeNameMap{filePath: filePath}
+func NewNodeNameMap(filePath string) (*NodeNameMap, error) {
+	n := &NodeNameMap{filePath: filePath}
 
 	if err := n.reload(); err != nil {
 		return n, err
