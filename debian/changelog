@@ -1,3 +1,10 @@
+fabricmon (0.1.6) stretch buster; urgency=medium
+
+  * Fix HCA discovery when more than one HCA present
+  * Fix go vet warning about copying sync.RWMutex value
+
+ -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Tue, 03 Mar 2020 17:39:41 +0100
+
 fabricmon (0.1.5) stretch buster; urgency=medium
 
   * Add timeout option in InfluxDB batch writer
