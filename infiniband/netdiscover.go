@@ -273,6 +273,9 @@ func (n *ibndNode) walkPorts(mad_port *C.struct_ibmad_port, resetThreshold uint)
 
 		// Get pointer to port struct at portNum array offset
 		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr + unsafe.Sizeof(arrayPtr)*uintptr(portNum)))
+		if pp == nil {
+			continue
+		}
 
 		myPort := Port{GUID: uint64(pp.guid)}
 
