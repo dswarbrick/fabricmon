@@ -1,6 +1,6 @@
 /*
  * FabricMon - an InfiniBand fabric monitor daemon.
- * Copyright 2017-18 Daniel Swarbrick
+ * Copyright 2017-20 Daniel Swarbrick
  */
 
 var fabrics = [
