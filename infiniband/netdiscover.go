@@ -7,6 +7,7 @@ package infiniband
 // #cgo LDFLAGS: -libnetdisc
 // #include <umad.h>
 // #include <ibnetdisc.h>
+// #include <iba/ib_types.h>
 import "C"
 
 import (
