@@ -1,3 +1,9 @@
+fabricmon (0.1.8) stretch buster; urgency=medium
+
+  * Add remote_guid tag to InfluxDB writer
+
+ -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Tue, 12 May 2020 15:13:57 +0200
+
 fabricmon (0.1.7) stretch buster; urgency=medium
 
   * Fix potential nil pointer dereference
