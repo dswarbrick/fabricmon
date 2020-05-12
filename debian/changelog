@@ -1,3 +1,9 @@
+fabricmon (0.1.7) stretch buster; urgency=medium
+
+  * Fix potential nil pointer dereference
+
+ -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Mon, 11 May 2020 17:03:54 +0200
+
 fabricmon (0.1.6) stretch buster; urgency=medium
 
   * Fix HCA discovery when more than one HCA present
