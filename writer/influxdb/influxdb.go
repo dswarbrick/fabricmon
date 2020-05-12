@@ -1,7 +1,5 @@
 // Copyright 2017-18 Daniel Swarbrick. All rights reserved.
 // Use of this source code is governed by a GPL license that can be found in the LICENSE file.
-//
-// TODO: Add support for specifying retention policy.
 
 // Package influxdb implements the InfluxDBWriter, which writes InfiniBand performance counters to
 // one or more configured InfluxDB backends.
@@ -109,6 +107,12 @@ func (w *InfluxDBWriter) makeBatch(fabric infiniband.Fabric) (client.BatchPoints
 		for portNum, port := range node.Ports {
 			tags["port"] = strconv.Itoa(portNum)
 
+			if port.RemoteGUID != 0 {
+				tags["remote_guid"] = fmt.Sprintf("%016x", port.RemoteGUID)
+			} else {
+				delete(tags, "remote_guid")
+			}
+
 			for counter, value := range port.Counters {
 				switch v := value.(type) {
 				case uint32:
@@ -118,7 +122,7 @@ func (w *InfluxDBWriter) makeBatch(fabric infiniband.Fabric) (client.BatchPoints
 					tags["counter"] = infiniband.ExtCounterMap[counter].Name
 					// InfluxDB Client docs erroneously claim that "uint64 data type is
 					// supported if your server is version 1.4.0 or greater."
-					// In fact, uint64 support has still not landed as of InfluxDB 1.6.
+					// In fact, uint64 support has still not landed as of InfluxDB 1.8.
 					// (https://github.com/influxdata/influxdb/pull/8923)
 					// Workaround is to convert to int64 (i.e., truncate to 63 bits).
 					fields["value"] = int64(v & 0x7fffffffffffffff)
