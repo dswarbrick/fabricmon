@@ -66,7 +66,7 @@ func (h *HCA) NetDiscover(output chan Fabric, mkey uint64, resetThreshold uint) 
 		mad_port := C.mad_rpc_open_port(&h.umad_ca.ca_name[0], umad_port.portnum, &mgmt_classes[0], C.int(len(mgmt_classes)))
 
 		if mad_port != nil {
-			C.smp_mkey_set(mad_port, C.uint64_t(mkey))
+			C.smp_mkey_set(mad_port, C.uint64_t(htonll(mkey)))
 			nodes := walkFabric(fabric, mad_port, resetThreshold)
 			C.mad_rpc_close_port(mad_port)
 
