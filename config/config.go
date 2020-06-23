@@ -6,7 +6,7 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -80,12 +80,7 @@ func (l *LogLevel) UnmarshalText(text []byte) error {
 	return err
 }
 
-func ReadConfig(configFile string) (*FabricmonConf, error) {
-	content, err := ioutil.ReadFile(configFile)
-	if err != nil {
-		return nil, fmt.Errorf("error reading config file: %s", err)
-	}
-
+func ReadConfig(r io.Reader) (*FabricmonConf, error) {
 	// Defaults
 	conf := &FabricmonConf{
 		PollInterval: time.Second * 10,
@@ -94,7 +89,8 @@ func ReadConfig(configFile string) (*FabricmonConf, error) {
 		},
 	}
 
-	if err := yaml.Unmarshal(content, conf); err != nil {
+	dec := yaml.NewDecoder(r)
+	if err := dec.Decode(conf); err != nil {
 		return nil, err
 	}
 

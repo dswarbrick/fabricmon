@@ -15,10 +15,8 @@ import (
 	"os/signal"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	log "github.com/sirupsen/logrus"
-
+	"golang.org/x/sys/unix"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/dswarbrick/fabricmon/config"
@@ -56,7 +54,7 @@ func router(input chan infiniband.Fabric, writers []writer.FabricWriter) {
 
 func main() {
 	var (
-		configFile = kingpin.Flag("config", "Path to config file.").Default("fabricmon.yml").String()
+		configFile = kingpin.Flag("config", "Path to config file.").Default("fabricmon.yml").File()
 		daemonize  = kingpin.Flag("daemonize", "Run forever, fetching counters periodically.").Default("true").Bool()
 	)
 
@@ -67,6 +65,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	(*configFile).Close()
 
 	// Initialise umad library (also required in order to run under ibsim).
 	if infiniband.UmadInit() < 0 {
