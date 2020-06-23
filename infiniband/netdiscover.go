@@ -49,7 +49,7 @@ func (h *HCA) NetDiscover(output chan Fabric, mkey uint64, resetThreshold uint) 
 		portLog.Debug("Polling port")
 
 		// ibnd_config_t specifies max hops, timeout, max SMPs etc
-		config := C.ibnd_config_t{flags: C.IBND_CONFIG_MLX_EPI}
+		config := C.ibnd_config_t{flags: C.IBND_CONFIG_MLX_EPI, mkey: C.uint64_t(mkey)}
 
 		// NOTE: Under ibsim, this will fail after a certain number of iterations with a
 		// mad_rpc_open_port() error (presumably due to a resource leak in ibsim).
@@ -66,7 +66,6 @@ func (h *HCA) NetDiscover(output chan Fabric, mkey uint64, resetThreshold uint) 
 		mad_port := C.mad_rpc_open_port(&h.umad_ca.ca_name[0], umad_port.portnum, &mgmt_classes[0], C.int(len(mgmt_classes)))
 
 		if mad_port != nil {
-			C.smp_mkey_set(mad_port, C.uint64_t(htonll(mkey)))
 			nodes := walkFabric(fabric, mad_port, resetThreshold)
 			C.mad_rpc_close_port(mad_port)
 
