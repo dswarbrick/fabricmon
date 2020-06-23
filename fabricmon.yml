@@ -6,6 +6,9 @@ poll_interval: 30s
 # Percent of maximum counter threshold at which to reset counter (25 - 100 percent)
 counter_reset_threshold: 80
 
+# SMP m_key
+m_key: 0x00
+
 logging:
   log_level: info
 
