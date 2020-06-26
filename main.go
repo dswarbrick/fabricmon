@@ -1,5 +1,5 @@
 // Copyright 2017-20 Daniel Swarbrick. All rights reserved.
-// Use of this source code is governed by a GPL license that can be found in the LICENSE file.
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 // cgo wrapper around libibumad / libibnetdiscover.
 // Note: Due to the usual permissions on /dev/infiniband/umad*, this will probably need to be

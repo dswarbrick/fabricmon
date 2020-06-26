@@ -1,5 +1,5 @@
 // Copyright 2017-20 Daniel Swarbrick. All rights reserved.
-// Use of this source code is governed by a GPL license that can be found in the LICENSE file.
+// SPDX-License-Identifier: GPL-3.0-or-later
 //
 // TODO: Implement user-friendly display of link rate (see ib_types.h).
 
