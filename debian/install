@@ -1,3 +1,0 @@
-apache.conf etc/fabricmon
-fabricmon.yml etc/fabricmon
-webui/* usr/share/fabricmon
