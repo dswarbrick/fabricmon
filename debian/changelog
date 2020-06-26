@@ -1,3 +1,9 @@
+fabricmon (0.1.9) stretch buster; urgency=medium
+
+  * Add support for specifying an InfiniBand management key (m_key)
+
+ -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Fri, 26 Jun 2020 12:36:23 +0200
+
 fabricmon (0.1.8) stretch buster; urgency=medium
 
   * Add remote_guid tag to InfluxDB writer
