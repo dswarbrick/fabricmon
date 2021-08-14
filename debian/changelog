@@ -3,6 +3,7 @@ fabricmon (0.1.10) stretch buster bullseye; urgency=medium
   * Skip discovery from HCA ports whose link layer is not InfiniBand
   * Update Standards-Version to 4.5.1
   * Update debhelper-compat to 12
+  * Add bullseye build
 
  -- Daniel Swarbrick <daniel.swarbrick@ionos.com>  Sat, 14 Aug 2021 11:32:17 +0000
 
