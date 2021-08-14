@@ -109,6 +109,7 @@ func (w *InfluxDBWriter) makeBatch(fabric infiniband.Fabric) (client.BatchPoints
 
 			if port.RemoteGUID != 0 {
 				tags["remote_guid"] = fmt.Sprintf("%016x", port.RemoteGUID)
+				log.Infof("remote_guid: %016x, remote_node_desc: %s", port.RemoteGUID, port.RemoteNodeDesc)
 			} else {
 				delete(tags, "remote_guid")
 			}

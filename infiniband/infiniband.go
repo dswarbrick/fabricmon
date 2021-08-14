@@ -39,11 +39,12 @@ type Node struct {
 }
 
 type Port struct {
-	GUID       uint64
-	RemoteGUID uint64
-	LinkWidth  string // link width, e.g., 1X, 4X, 8X, 12X
-	LinkSpeed  string // link speed, e.g., SDR, DDR, QDR, FDR, FDR10, EDR
-	Counters   map[uint32]interface{}
+	GUID           uint64
+	RemoteGUID     uint64
+	RemoteNodeDesc string
+	LinkWidth      string // link width, e.g., 1X, 4X, 8X, 12X
+	LinkSpeed      string // link speed, e.g., SDR, DDR, QDR, FDR, FDR10, EDR
+	Counters       map[uint32]interface{}
 }
 
 type Counter struct {
