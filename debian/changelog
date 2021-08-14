@@ -1,3 +1,9 @@
+fabricmon (0.1.11) stretch buster bullseye; urgency=medium
+
+  * Store port's remode node description as an InfluxDB tag
+
+ -- Daniel Swarbrick <daniel.swarbrick@ionos.com>  Sat, 14 Aug 2021 12:24:57 +0000
+
 fabricmon (0.1.10) stretch buster bullseye; urgency=medium
 
   * Skip discovery from HCA ports whose link layer is not InfiniBand
