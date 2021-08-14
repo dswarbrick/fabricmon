@@ -1,27 +1,35 @@
+fabricmon (0.1.10) stretch buster bullseye; urgency=medium
+
+  * Skip discovery from HCA ports whose link layer is not InfiniBand
+  * Update Standards-Version to 4.5.1
+  * Update debhelper-compat to 12
+
+ -- Daniel Swarbrick <daniel.swarbrick@ionos.com>  Sat, 14 Aug 2021 11:32:17 +0000
+
 fabricmon (0.1.9) stretch buster; urgency=medium
 
   * Add support for specifying an InfiniBand management key (m_key)
 
- -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Fri, 26 Jun 2020 12:36:23 +0200
+ -- Daniel Swarbrick <daniel.swarbrick@ionos.com>  Fri, 26 Jun 2020 12:36:23 +0200
 
 fabricmon (0.1.8) stretch buster; urgency=medium
 
   * Add remote_guid tag to InfluxDB writer
 
- -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Tue, 12 May 2020 15:13:57 +0200
+ -- Daniel Swarbrick <daniel.swarbrick@ionos.com>  Tue, 12 May 2020 15:13:57 +0200
 
 fabricmon (0.1.7) stretch buster; urgency=medium
 
   * Fix potential nil pointer dereference
 
- -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Mon, 11 May 2020 17:03:54 +0200
+ -- Daniel Swarbrick <daniel.swarbrick@ionos.com>  Mon, 11 May 2020 17:03:54 +0200
 
 fabricmon (0.1.6) stretch buster; urgency=medium
 
   * Fix HCA discovery when more than one HCA present
   * Fix go vet warning about copying sync.RWMutex value
 
- -- Daniel Swarbrick <daniel.swarbrick@cloud.ionos.com>  Tue, 03 Mar 2020 17:39:41 +0100
+ -- Daniel Swarbrick <daniel.swarbrick@ionos.com>  Tue, 03 Mar 2020 17:39:41 +0100
 
 fabricmon (0.1.5) stretch buster; urgency=medium
 

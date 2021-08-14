@@ -4,7 +4,6 @@ Priority: optional
 Maintainer: Daniel Swarbrick <dswarbrick@users.noreply.github.com>
 Build-Depends: debhelper-compat (= 12),
                dh-golang,
-               dh-systemd,
                golang-github-fsnotify-fsnotify-dev,
                golang-github-influxdb-influxdb-dev,
                golang-github-sirupsen-logrus-dev,
@@ -21,6 +20,7 @@ Rules-Requires-Root: no
 Homepage: https://github.com/dswarbrick/fabricmon
 Vcs-Browser: https://github.com/dswarbrick/fabricmon
 Vcs-Git: https://github.com/dswarbrick/fabricmon.git
+XS-Go-Import-Path: github.com/dswarbrick/fabricmon
 
 Package: fabricmon
 Architecture: any
