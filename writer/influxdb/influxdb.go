@@ -109,9 +109,10 @@ func (w *InfluxDBWriter) makeBatch(fabric infiniband.Fabric) (client.BatchPoints
 
 			if port.RemoteGUID != 0 {
 				tags["remote_guid"] = fmt.Sprintf("%016x", port.RemoteGUID)
-				log.Infof("remote_guid: %016x, remote_node_desc: %s", port.RemoteGUID, port.RemoteNodeDesc)
+				tags["remote_node_desc"] = port.RemoteNodeDesc
 			} else {
 				delete(tags, "remote_guid")
+				delete(tags, "remote_node_desc")
 			}
 
 			for counter, value := range port.Counters {
@@ -121,10 +122,10 @@ func (w *InfluxDBWriter) makeBatch(fabric infiniband.Fabric) (client.BatchPoints
 					fields["value"] = int64(v)
 				case uint64:
 					tags["counter"] = infiniband.ExtCounterMap[counter].Name
-					// InfluxDB Client docs erroneously claim that "uint64 data type is
-					// supported if your server is version 1.4.0 or greater."
-					// In fact, uint64 support has still not landed as of InfluxDB 1.8.
-					// (https://github.com/influxdata/influxdb/pull/8923)
+					// InfluxDB Client docs erroneously claim that "uint64 data type is supported
+					// if your server is version 1.4.0 or greater."
+					// In fact, it has been decided that InfluxDB 1.x will never support uint64:
+					// https://github.com/influxdata/influxdb/pull/8923
 					// Workaround is to convert to int64 (i.e., truncate to 63 bits).
 					fields["value"] = int64(v & 0x7fffffffffffffff)
 				default:
