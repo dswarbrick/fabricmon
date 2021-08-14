@@ -45,7 +45,14 @@ func (h *HCA) NetDiscover(output chan Fabric, mkey uint64, resetThreshold uint) 
 		}
 
 		portNum := int(umad_port.portnum)
+		linkLayer := C.GoString(&umad_port.link_layer[0])
 		portLog := log.WithFields(log.Fields{"ca": h.Name, "port": portNum})
+
+		if linkLayer != "InfiniBand" {
+			portLog.Debugf("Skipping port with unsupported link layer %s", linkLayer)
+			continue
+		}
+
 		portLog.Debug("Polling port")
 
 		// ibnd_config_t specifies max hops, timeout, max SMPs etc
