@@ -337,6 +337,7 @@ func (n *ibndNode) walkPorts(mad_port *C.struct_ibmad_port, resetThreshold uint)
 
 		if rp != nil {
 			myPort.RemoteGUID = uint64(rp.node.guid)
+			myPort.RemoteNodeDesc = C.GoString(&rp.node.nodedesc[0])
 
 			// Port counters will only be fetched if port is ACTIVE + LINKUP
 			if (portState == C.IB_LINK_ACTIVE) && (physState == C.IB_PORT_PHYS_STATE_LINKUP) {
