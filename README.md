@@ -73,7 +73,7 @@ Run fabricmon with an LD_PRELOAD, so that it will connect to the simulated
 fabric:
 
 ```
-$ LD_PRELOAD=/usr/lib/umad2sim/libumad2sim.so go run *.go
+$ LD_PRELOAD=/usr/lib/x86_64-linux-gnu/umad2sim/libumad2sim.so go run main.go
 ```
 
 ## InfluxDB Data Model
