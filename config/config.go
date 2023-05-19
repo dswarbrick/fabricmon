@@ -12,7 +12,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // FabricmonConf is the main configuration struct for FabricMon.
