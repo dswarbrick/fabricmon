@@ -2,12 +2,12 @@ Source: fabricmon
 Section: net
 Priority: optional
 Maintainer: Daniel Swarbrick <dswarbrick@users.noreply.github.com>
-Build-Depends: debhelper-compat (= 12),
+Build-Depends: debhelper-compat (= 13),
                dh-golang,
                golang-github-fsnotify-fsnotify-dev,
                golang-github-influxdb-influxdb-dev,
                golang-github-sirupsen-logrus-dev,
-               golang-go,
+               golang-go (>= 2:1.17~),
                golang-golang-x-sys-dev,
                golang-gopkg-alecthomas-kingpin.v2-dev,
                golang-gopkg-yaml.v2-dev,
