@@ -7,7 +7,7 @@
 // functions like ioctl(2) and basic file IO functions (e.g., open(2), read(2) etc.) are also
 // hijacked to intercept operations on /dev/infiniband/* and /sys/class/infiniband/* entries.
 //
-// Go's ioutil.ReadDir() function results in a function call chain of:
+// Go's os.ReadDir() function results in a function call chain of:
 //   os.Open -> os.OpenFile -> syscall.Open -> syscall.openat -> syscall.Syscall6(SYS_OPENAT, ...)
 // The openat() call is not intercepted by the libumad2sim.so LD_PRELOAD.
 
@@ -19,7 +19,7 @@ package infiniband
 import "C"
 
 import (
-	"io/ioutil"
+	"os"
 	"strings"
 	"unsafe"
 )
@@ -41,7 +41,7 @@ func UmadDone() {
 
 // getCANames is the functional equivalent of umad_get_cas_names()
 func getCANames() ([]string, error) {
-	files, err := ioutil.ReadDir(SYS_INFINIBAND)
+	files, err := os.ReadDir(SYS_INFINIBAND)
 	if err != nil {
 		return nil, err
 	}
