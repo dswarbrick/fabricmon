@@ -8,7 +8,6 @@ package forcegraph
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -89,7 +88,7 @@ func buildTopology(nodes []infiniband.Node) d3Topology {
 func writeTopology(outputDir string, fabric infiniband.Fabric) error {
 	// Write d3.js topology to a temporary file, then rename it to target file, to ensure atomic
 	// updates and avoid partial reads by clients.
-	tempFile, err := ioutil.TempFile(outputDir, ".fabricmon")
+	tempFile, err := os.CreateTemp(outputDir, ".fabricmon")
 	if err != nil {
 		return err
 	}
