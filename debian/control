@@ -7,7 +7,7 @@ Build-Depends: debhelper-compat (= 13),
                golang-github-fsnotify-fsnotify-dev,
                golang-github-influxdb-influxdb-dev,
                golang-github-sirupsen-logrus-dev,
-               golang-go (>= 2:1.17~),
+               golang-go (>= 2:1.19~),
                golang-golang-x-sys-dev,
                golang-gopkg-alecthomas-kingpin.v2-dev,
                golang-gopkg-yaml.v3-dev,
@@ -15,7 +15,7 @@ Build-Depends: debhelper-compat (= 13),
                libibnetdisc-dev,
                libibumad-dev,
                libopensm-dev
-Standards-Version: 4.5.1
+Standards-Version: 4.6.2
 Rules-Requires-Root: no
 Homepage: https://github.com/dswarbrick/fabricmon
 Vcs-Browser: https://github.com/dswarbrick/fabricmon
