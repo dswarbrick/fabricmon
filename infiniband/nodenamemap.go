@@ -154,7 +154,7 @@ func init() {
 	var err error
 
 	if nnMap, err = NewNodeNameMap(DEFAULT_NODE_NAME_MAP); err != nil {
-		// FIXME: since init() functions are called before main(), this can resulting in
+		// FIXME: since init() functions are called before main(), this can result in
 		// inconsistent log formatting, as the default logger is not yet initialised.
 		slog.Error("cannot load node name map", "err", err)
 	}
