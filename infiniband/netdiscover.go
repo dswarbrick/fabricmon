@@ -48,8 +48,8 @@ func (h *HCA) NetDiscover(output chan Fabric, mkey uint64, resetThreshold uint) 
 		linkLayer := C.GoString(&umad_port.link_layer[0])
 		portLog := log.WithFields(log.Fields{"ca": h.Name, "port": portNum})
 
-		if linkLayer != "InfiniBand" {
-			portLog.Debugf("Skipping port with unsupported link layer %s", linkLayer)
+		if linkLayer != "InfiniBand" && linkLayer != "IB" {
+			portLog.Debugf("Skipping port with unsupported link layer %q", linkLayer)
 			continue
 		}
 
@@ -98,9 +98,9 @@ func (h *HCA) NetDiscover(output chan Fabric, mkey uint64, resetThreshold uint) 
 	}
 
 	log.WithFields(log.Fields{
-		"time":  time.Since(start),
-		"nodes": totalNodes,
-		"ports": totalPorts},
+		"duration": time.Since(start),
+		"nodes":    totalNodes,
+		"ports":    totalPorts},
 	).Info("NetDiscover completed")
 }
 
@@ -160,7 +160,7 @@ func (n *ibndNode) getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort
 	pmaBuf := C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.CLASS_PORT_INFO, ibmadPort)
 
 	if pmaBuf == nil {
-		return counters, fmt.Errorf("CLASS_PORT_INFO query failed!")
+		return counters, fmt.Errorf("CLASS_PORT_INFO query failed")
 	}
 
 	// Keep capMask in network byte order for easier bitwise operations with capabilities contants.
@@ -213,7 +213,7 @@ func (n *ibndNode) getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort
 	pmaBuf = C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS_EXT, ibmadPort)
 
 	if pmaBuf != nil {
-		for field, _ := range ExtCounterMap {
+		for field := range ExtCounterMap {
 			counters[field] = uint64(C.mad_get_field64(unsafe.Pointer(&buf), 0, field))
 		}
 	}
