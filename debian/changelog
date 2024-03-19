@@ -1,3 +1,9 @@
+fabricmon (0.2.0) unstable; urgency=medium
+
+  * Migrate from logrus to Go standard library log/slog
+
+ -- Daniel Swarbrick <dswarbrick@debian.org>  Tue, 19 Mar 2024 17:50:48 +0000
+
 fabricmon (0.1.11) stretch buster bullseye; urgency=medium
 
   * Store port's remode node description as an InfluxDB tag
