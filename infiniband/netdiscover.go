@@ -12,11 +12,10 @@ import "C"
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 	"unsafe"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type HCA struct {
@@ -46,14 +45,14 @@ func (h *HCA) NetDiscover(output chan Fabric, mkey uint64, resetThreshold uint) 
 
 		portNum := int(umad_port.portnum)
 		linkLayer := C.GoString(&umad_port.link_layer[0])
-		portLog := log.WithFields(log.Fields{"ca": h.Name, "port": portNum})
+		portLog := slog.With("ca", h.Name, "port", portNum)
 
 		if linkLayer != "InfiniBand" && linkLayer != "IB" {
-			portLog.Debugf("Skipping port with unsupported link layer %q", linkLayer)
+			portLog.Debug("skipping port with unsupported link layer", "link_layer", linkLayer)
 			continue
 		}
 
-		portLog.Debug("Polling port")
+		portLog.Debug("polling port")
 
 		// ibnd_config_t specifies max hops, timeout, max SMPs etc
 		config := C.ibnd_config_t{flags: C.IBND_CONFIG_MLX_EPI, mkey: C.uint64_t(mkey)}
@@ -64,7 +63,7 @@ func (h *HCA) NetDiscover(output chan Fabric, mkey uint64, resetThreshold uint) 
 		fabric, err := C.ibnd_discover_fabric(&h.umad_ca.ca_name[0], umad_port.portnum, nil, &config)
 
 		if err != nil {
-			portLog.WithError(err).Error("Unable to discover fabric")
+			portLog.Error("unable to discover fabric", "err", err)
 			continue
 		}
 
@@ -91,23 +90,20 @@ func (h *HCA) NetDiscover(output chan Fabric, mkey uint64, resetThreshold uint) 
 				}
 			}
 		} else {
-			portLog.Error("Unable to open MAD port")
+			portLog.Error("unable to open MAD port")
 		}
 
 		C.ibnd_destroy_fabric(fabric)
 	}
 
-	log.WithFields(log.Fields{
-		"duration": time.Since(start),
-		"nodes":    totalNodes,
-		"ports":    totalPorts},
-	).Info("NetDiscover completed")
+	slog.Info("netdiscover complete",
+		"duration", time.Since(start), "nodes", totalNodes, "ports", totalPorts)
 }
 
 func (h *HCA) Release() {
 	// Free associated memory from pointers in umad_ca_t.ports
 	if C.umad_release_ca(h.umad_ca) < 0 {
-		log.Error("umad_release_ca: ", h.umad_ca)
+		slog.Error("umad_release_ca", "umad_ca", h.umad_ca)
 	}
 }
 
@@ -122,15 +118,14 @@ func GetCAs() []HCA {
 		C.umad_get_ca(ca_name, &ca)
 		C.free(unsafe.Pointer(ca_name))
 
-		log.WithFields(log.Fields{
-			"ca":          C.GoString(&ca.ca_name[0]),
-			"type":        C.GoString(&ca.ca_type[0]),
-			"ports":       ca.numports,
-			"firmware":    C.GoString(&ca.fw_ver[0]),
-			"hardware":    C.GoString(&ca.hw_ver[0]),
-			"node_guid":   fmt.Sprintf("%#016x", ntohll(uint64(ca.node_guid))),
-			"system_guid": fmt.Sprintf("%#016x", ntohll(uint64(ca.system_guid))),
-		}).Info("Found HCA")
+		slog.Info("found HCA",
+			"ca", C.GoString(&ca.ca_name[0]),
+			"type", C.GoString(&ca.ca_type[0]),
+			"ports", ca.numports,
+			"firmware", C.GoString(&ca.fw_ver[0]),
+			"hardware", C.GoString(&ca.hw_ver[0]),
+			"node_guid", fmt.Sprintf("%#016x", ntohll(uint64(ca.node_guid))),
+			"system_guid", fmt.Sprintf("%#016x", ntohll(uint64(ca.system_guid))))
 
 		hcas[i] = HCA{
 			Name:    caName,
@@ -143,7 +138,7 @@ func GetCAs() []HCA {
 
 type ibndNode struct {
 	ibnd_node *C.struct_ibnd_node
-	log       *log.Entry
+	slog      *slog.Logger
 }
 
 // getPortCounters retrieves all counters for a specific port.
@@ -154,7 +149,7 @@ func (n *ibndNode) getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort
 	var buf [1024]byte
 
 	counters := make(map[uint32]interface{})
-	portLog := n.log.WithFields(log.Fields{"port": portNum})
+	portLog := n.slog.With("port", portNum)
 
 	// PerfMgt ClassPortInfo is a required attribute. See ClassPortInfo, IBTA spec v1.3, table 126.
 	pmaBuf := C.pma_query_via(unsafe.Pointer(&buf), portId, C.int(portNum), PMA_TIMEOUT, C.CLASS_PORT_INFO, ibmadPort)
@@ -181,10 +176,7 @@ func (n *ibndNode) getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort
 			counters[field] = uint32(C.mad_get_field(unsafe.Pointer(&buf), 0, field))
 
 			if float64(counters[field].(uint32)) > (float64(counter.Limit) * float64(resetThreshold) / 100) {
-				portLog.WithFields(log.Fields{
-					"counter": counter.Name,
-					"value":   counters[field],
-				}).Warn("Counter exceeds threshold")
+				portLog.Warn("counter exceeds threshold", "counter", counter.Name, "value", counters[field])
 
 				selMask |= counter.Select
 			}
@@ -193,8 +185,8 @@ func (n *ibndNode) getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort
 		if selMask > 0 {
 			var pc [1024]byte
 
-			resetLog := portLog.WithFields(log.Fields{"select_mask": fmt.Sprintf("%#x", selMask)})
-			resetLog.Warn("Resetting counters")
+			resetLog := portLog.With("select_mask", fmt.Sprintf("%#x", selMask))
+			resetLog.Warn("resetting counters")
 
 			if C.performance_reset_via(unsafe.Pointer(&pc), portId, C.int(portNum), C.uint(selMask), PMA_TIMEOUT, C.IB_GSI_PORT_COUNTERS, ibmadPort) == nil {
 				resetLog.Error("performance_reset_via failed")
@@ -205,7 +197,7 @@ func (n *ibndNode) getPortCounters(portId *C.ib_portid_t, portNum int, ibmadPort
 	if (capMask&C.IB_PM_EXT_WIDTH_SUPPORTED == 0) && (capMask&C.IB_PM_EXT_WIDTH_NOIETF_SUP == 0) {
 		// TODO: Fetch standard data / packet counters if extended counters are not supported
 		// (pre-QDR hardware).
-		portLog.Warn("Port does not support extended counters")
+		portLog.Warn("port does not support extended counters")
 		return counters, nil
 	}
 
@@ -254,10 +246,7 @@ func (n *ibndNode) simpleNode() Node {
 func (n *ibndNode) walkPorts(mad_port *C.struct_ibmad_port, resetThreshold uint) []Port {
 	var portid C.ib_portid_t
 
-	n.log.WithFields(log.Fields{
-		"node_type": n.ibnd_node._type,
-		"num_ports": n.ibnd_node.numports,
-	}).Debug("Walking ports for node")
+	n.slog.Debug("walking ports for node", "node_type", n.ibnd_node._type, "num_ports", n.ibnd_node.numports)
 
 	ports := make([]Port, n.ibnd_node.numports+1)
 
@@ -277,7 +266,7 @@ func (n *ibndNode) walkPorts(mad_port *C.struct_ibmad_port, resetThreshold uint)
 			linkSpeedExt uint
 		)
 
-		portLog := n.log.WithFields(log.Fields{"port": portNum})
+		portLog := n.slog.With("port", portNum)
 
 		// Get pointer to port struct at portNum array offset
 		pp := *(**C.ibnd_port_t)(unsafe.Pointer(arrayPtr + unsafe.Sizeof(arrayPtr)*uintptr(portNum)))
@@ -325,12 +314,11 @@ func (n *ibndNode) walkPorts(mad_port *C.struct_ibmad_port, resetThreshold uint)
 			}
 		}
 
-		portLog.WithFields(log.Fields{
-			"port_state": PortStateToStr(uint(portState)),
-			"phys_state": PortPhysStateToStr(uint(physState)),
-			"link_width": myPort.LinkWidth,
-			"link_speed": myPort.LinkSpeed,
-		}).Debugf("Port info")
+		portLog.Debug("port info",
+			"port_state", PortStateToStr(uint(portState)),
+			"phys_state", PortPhysStateToStr(uint(physState)),
+			"link_width", myPort.LinkWidth,
+			"link_speed", myPort.LinkSpeed)
 
 		// Remote port may be nil if port state is polling / armed.
 		rp := pp.remoteport
@@ -347,7 +335,7 @@ func (n *ibndNode) walkPorts(mad_port *C.struct_ibmad_port, resetThreshold uint)
 					uint(C.mad_get_field(unsafe.Pointer(&rp.info), 0, C.IB_PORT_LINK_WIDTH_SUPPORTED_F)))
 
 				if uint(linkWidth) != maxWidth {
-					portLog.Warn("Link width is not the max width supported by both ports")
+					portLog.Warn("link width is not the max width supported by both ports")
 				}
 
 				// Determine max speed supported by both ends
@@ -367,7 +355,7 @@ func (n *ibndNode) walkPorts(mad_port *C.struct_ibmad_port, resetThreshold uint)
 				if counters, err := n.getPortCounters(&portid, portNum, mad_port, resetThreshold); err == nil {
 					myPort.Counters = counters
 				} else {
-					portLog.WithError(err).Error("Cannot get counters for port")
+					portLog.Error("cannot get counters for port", "err", err)
 				}
 			}
 		}
@@ -383,10 +371,10 @@ func walkFabric(fabric *C.struct_ibnd_fabric, mad_port *C.struct_ibmad_port, res
 
 	for node := fabric.nodes; node != nil; node = node.next {
 		n := ibndNode{ibnd_node: node}
-		n.log = log.WithFields(log.Fields{
-			"node_desc": nnMap.RemapNodeName(n.guid(), n.nodeDesc()),
-			"node_guid": n.guidString(),
-		})
+		n.slog = slog.With(
+			"node_desc", nnMap.RemapNodeName(n.guid(), n.nodeDesc()),
+			"node_guid", n.guidString(),
+		)
 
 		myNode := n.simpleNode()
 

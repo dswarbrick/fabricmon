@@ -6,16 +6,15 @@
 // executed as root.
 
 // Package fabricmon is an InfiniBand fabric monitor daemon.
-//
 package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -49,7 +48,7 @@ func router(input chan infiniband.Fabric, writers []writer.FabricWriter) {
 		close(c)
 	}
 
-	log.Debug("Router input channel closed. Exiting function.")
+	slog.Debug("Router input channel closed. Exiting function.")
 }
 
 func main() {
@@ -62,26 +61,26 @@ func main() {
 
 	conf, err := config.ReadConfig(*configFile)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	(*configFile).Close()
 
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: conf.Logging.LogLevel})))
+
 	// Initialise umad library (also required in order to run under ibsim).
 	if infiniband.UmadInit() < 0 {
-		fmt.Println("Error initialising umad library. Exiting.")
+		slog.Error("Error initialising umad library. Exiting.")
 		os.Exit(1)
 	}
 
+	slog.Info("FabricMon " + version.Info())
 	hcas := infiniband.GetCAs()
 
 	if len(hcas) == 0 {
-		fmt.Println("No HCAs found in system. Exiting.")
+		slog.Error("No HCAs found in system. Exiting.")
 		os.Exit(1)
 	}
-
-	log.SetLevel(log.Level(conf.Logging.LogLevel))
-	log.Info("FabricMon ", version.Info())
 
 	// Channel to signal goroutines that we are shutting down.
 	shutdownChan := make(chan bool)
@@ -91,7 +90,7 @@ func main() {
 	signal.Notify(sigChan, unix.SIGINT, unix.SIGTERM)
 	go func() {
 		s := <-sigChan
-		log.WithFields(log.Fields{"signal": s}).Debug("Shutting down due to signal.")
+		slog.Debug("shutting down due to signal", "signal", s)
 		close(shutdownChan)
 	}()
 
@@ -129,7 +128,7 @@ func main() {
 					hca.NetDiscover(splitter, conf.Mkey, conf.ResetThreshold)
 				}
 			case <-shutdownChan:
-				log.Debug("Shutdown received in polling loop.")
+				slog.Debug("shutdown received in polling loop")
 				break Loop
 			}
 		}
@@ -137,7 +136,7 @@ func main() {
 		close(splitter)
 	}
 
-	log.Debug("Cleaning up")
+	slog.Debug("cleaning up")
 
 	// Free associated memory from pointers in umad_ca_t.ports
 	for _, hca := range hcas {

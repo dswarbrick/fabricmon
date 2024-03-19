@@ -12,9 +12,8 @@ package infiniband
 import "C"
 
 import (
+	"log/slog"
 	"unsafe"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -72,6 +71,11 @@ func smInfo(caName string, portNum int) {
 	C.mad_decode_field(&sminfo[0], C.IB_SMINFO_PRIO_F, unsafe.Pointer(&prio))
 	C.mad_decode_field(&sminfo[0], C.IB_SMINFO_STATE_F, unsafe.Pointer(&state))
 
-	log.Infof("sminfo: sm lid %d sm guid %#16x, activity count %d priority %d state %d %s",
-		portid.lid, guid, act, prio, state, smStateMap[state])
+	slog.Info("sminfo",
+		"sm_lid", portid.lid,
+		"sm_guid", guid,
+		"activity_count", act,
+		"priority", prio,
+		"state", state,
+		"state_text", smStateMap[state])
 }
