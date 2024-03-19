@@ -98,9 +98,9 @@ func (h *HCA) NetDiscover(output chan Fabric, mkey uint64, resetThreshold uint) 
 	}
 
 	log.WithFields(log.Fields{
-		"time":  time.Since(start),
-		"nodes": totalNodes,
-		"ports": totalPorts},
+		"duration": time.Since(start),
+		"nodes":    totalNodes,
+		"ports":    totalPorts},
 	).Info("NetDiscover completed")
 }
 
