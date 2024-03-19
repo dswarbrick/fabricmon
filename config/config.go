@@ -7,11 +7,10 @@ package config
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"time"
 
 	"golang.org/x/sys/unix"
-
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -44,7 +43,7 @@ type InfluxDBConf struct {
 }
 
 type LoggingConf struct {
-	LogLevel LogLevel `yaml:"log_level"`
+	LogLevel slog.Level `yaml:"log_level"`
 }
 
 type TopologyConf struct {
@@ -62,31 +61,12 @@ func (conf *TopologyConf) validate() error {
 	return nil
 }
 
-// LogLevel is a wrapper type for logrus.Level.
-type LogLevel logrus.Level
-
-// String returns the string representation of the log level.
-func (l LogLevel) String() string {
-	return logrus.Level(l).String()
-}
-
-// UnmarshalText parses a byte slice value into a logrus.Level value.
-func (l *LogLevel) UnmarshalText(text []byte) error {
-	level, err := logrus.ParseLevel(string(text))
-
-	if err == nil {
-		*l = LogLevel(level)
-	}
-
-	return err
-}
-
 func ReadConfig(r io.Reader) (*FabricmonConf, error) {
 	// Defaults
 	conf := &FabricmonConf{
 		PollInterval: time.Second * 10,
 		Logging: LoggingConf{
-			LogLevel: LogLevel(logrus.InfoLevel),
+			LogLevel: slog.LevelInfo,
 		},
 	}
 

@@ -7,6 +7,7 @@ package infiniband
 
 import (
 	"bufio"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"unicode"
 
 	"github.com/fsnotify/fsnotify"
-	log "github.com/sirupsen/logrus"
 )
 
 const DEFAULT_NODE_NAME_MAP = "/etc/opensm/ib-node-name-map"
@@ -42,10 +42,10 @@ func NewNodeNameMap(filePath string) (*NodeNameMap, error) {
 	if watcher, err := fsnotify.NewWatcher(); err == nil {
 		n.watcher = watcher
 		if err := n.watcher.Add(n.filePath); err != nil {
-			log.WithError(err).Error("Cannot add fsnotify watch for node name map")
+			slog.Error("cannot add fsnotify watch for node name map", "err", err)
 		}
 	} else {
-		log.WithError(err).Error("Cannot create fsnotify watcher")
+		slog.Error("cannot create fsnotify watcher", "err", err)
 		return n, err
 	}
 
@@ -58,23 +58,23 @@ func NewNodeNameMap(filePath string) (*NodeNameMap, error) {
 					break
 				}
 
-				log.Infof("NodeNameMap watcher event: %s", event.Op)
+				slog.Info("node name map watcher event", "event", event.Op)
 
 				if event.Op == fsnotify.Remove {
 					if err := n.watcher.Add(n.filePath); err != nil {
-						log.WithError(err).Error("Cannot re-add fsnotify watcher for node name map")
+						slog.Error("cannot re-add fsnotify watcher for node name map", "err", err)
 					}
 				} else {
 					if err := n.reload(); err != nil {
-						log.WithError(err).Error("Failed to reload node name map")
+						slog.Error("failed to reload node name map", "err", err)
 					} else {
-						log.Info("Node name map reloaded")
+						slog.Info("node name map reloaded")
 					}
 				}
 
 			case err := <-n.watcher.Errors:
 				if err != nil {
-					log.WithError(err).Error("Error watching node name map")
+					slog.Error("error watching node name map", "err", err)
 				}
 			}
 		}
@@ -154,6 +154,8 @@ func init() {
 	var err error
 
 	if nnMap, err = NewNodeNameMap(DEFAULT_NODE_NAME_MAP); err != nil {
-		log.WithError(err).Error("Cannot load node name map")
+		// FIXME: since init() functions are called before main(), this can resulting in
+		// inconsistent log formatting, as the default logger is not yet initialised.
+		slog.Error("cannot load node name map", "err", err)
 	}
 }

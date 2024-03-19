@@ -8,10 +8,9 @@ package forcegraph
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dswarbrick/fabricmon/infiniband"
 )
@@ -47,7 +46,7 @@ func (fg *ForceGraphWriter) Receiver(input chan infiniband.Fabric) {
 
 		if fg.OutputDir != "" {
 			if err := writeTopology(fg.OutputDir, fabric); err != nil {
-				log.WithError(err).Error("cannot marshal fabric to force graph topology")
+				slog.Error("cannot marshal fabric to force graph topology", "err", err)
 			}
 		}
 	}

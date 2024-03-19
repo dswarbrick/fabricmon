@@ -7,11 +7,11 @@ package influxdb
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
 	"github.com/influxdata/influxdb/client/v2"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/dswarbrick/fabricmon/config"
 	"github.com/dswarbrick/fabricmon/infiniband"
@@ -47,32 +47,31 @@ func (w *InfluxDBWriter) Receiver(input chan infiniband.Fabric) {
 	})
 
 	if err != nil {
-		log.Error(err)
+		slog.Error("cannot init InfluxDB client", "err", err)
 		return
 	}
 
 	if rtt, version, err := c.Ping(0); err == nil {
-		log.WithFields(log.Fields{"version": version, "rtt": rtt}).Infof("InfluxDB ping reply")
+		slog.Info("InfluxDB ping reply", "version", version, "rtt", rtt)
 	}
 
 	// Loop indefinitely until input chan closed.
 	for fabric := range input {
 		if batch, err := w.makeBatch(fabric); err == nil {
-			log.WithFields(log.Fields{
-				"hca":    fabric.CAName,
-				"port":   fabric.SourcePort,
-				"points": len(batch.Points()),
-			}).Debugf("InfluxDB batch created")
+			slog.Debug("InfluxDB batch created",
+				"hca", fabric.CAName,
+				"port", fabric.SourcePort,
+				"points", len(batch.Points()))
 
 			if err := c.Write(batch); err != nil {
-				log.WithError(err).Error("InfluxDB batch write error")
+				slog.Error("InfluxDB batch write error", "err", err)
 			}
 		} else {
-			log.Error(err)
+			slog.Error("InfluxDB batch creation error", "err", err)
 		}
 	}
 
-	log.Debug("InfluxDBWriter input channel closed. Closing InfluxDB client connections.")
+	slog.Debug("InfluxDBWriter input channel closed. Closing InfluxDB client connections.")
 	c.Close()
 }
 
