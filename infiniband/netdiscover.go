@@ -48,8 +48,8 @@ func (h *HCA) NetDiscover(output chan Fabric, mkey uint64, resetThreshold uint) 
 		linkLayer := C.GoString(&umad_port.link_layer[0])
 		portLog := log.WithFields(log.Fields{"ca": h.Name, "port": portNum})
 
-		if linkLayer != "InfiniBand" {
-			portLog.Debugf("Skipping port with unsupported link layer %s", linkLayer)
+		if linkLayer != "InfiniBand" && linkLayer != "IB" {
+			portLog.Debugf("Skipping port with unsupported link layer %q", linkLayer)
 			continue
 		}
 
