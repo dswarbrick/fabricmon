@@ -19,13 +19,8 @@ package infiniband
 import "C"
 
 import (
-	"os"
 	"strings"
 	"unsafe"
-)
-
-const (
-	SYS_INFINIBAND = "/sys/class/infiniband"
 )
 
 // UmadInit simply wraps the libibumad umad_init() function.
@@ -37,21 +32,6 @@ func UmadInit() int {
 func UmadDone() {
 	// NOTE: ibsim indicates that FabricMon is not "disconnecting" when it exits - resource leak?
 	C.umad_done()
-}
-
-// getCANames is the functional equivalent of umad_get_cas_names()
-func getCANames() ([]string, error) {
-	files, err := os.ReadDir(SYS_INFINIBAND)
-	if err != nil {
-		return nil, err
-	}
-
-	caNames := []string{}
-	for _, file := range files {
-		caNames = append(caNames, file.Name())
-	}
-
-	return caNames, nil
 }
 
 // UmadGetCANames returns a slice of CA names, as retrieved by libibumad. This function must be
