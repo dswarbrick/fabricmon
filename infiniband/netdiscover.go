@@ -108,7 +108,7 @@ func (h *HCA) Release() {
 }
 
 func GetCAs() []HCA {
-	caNames := umadGetCANames()
+	caNames := umadGetCADeviceList()
 	hcas := make([]HCA, len(caNames))
 
 	for i, caName := range caNames {

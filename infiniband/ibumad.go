@@ -19,24 +19,41 @@ package infiniband
 import "C"
 
 import (
-	"strings"
+	"bytes"
 	"unsafe"
 )
 
-// UmadGetCANames returns a slice of CA names, as retrieved by libibumad. This function must be
+// umadGetCADeviceList wraps the umad_get_ca_device_list() function. This function is the modern
+// replacement for umad_get_cas_names(), and supports returning an arbitrary number of CAs. It is
+// supported by rdma-core v26.0 and later.
+func umadGetCADeviceList() []string {
+	device_list := C.umad_get_ca_device_list()
+
+	hcas := make([]string, 0)
+	for node := device_list; node != nil; node = node.next {
+		hcas = append(hcas, C.GoString(node.ca_name))
+	}
+
+	C.umad_free_ca_device_list(device_list)
+
+	return hcas
+}
+
+// umadGetCANames returns a slice of CA names, as retrieved by libibumad. This function must be
 // used when running FabricMon under ibsim, since the libumad2sim.so does not intercept Go's use
 // of the openat() syscall.
+//
+// Deprecated: Use umadGetCADeviceList instead, which supports returning an arbitrary number of CAs.
 func umadGetCANames() []string {
-	var (
-		buf  [C.UMAD_MAX_DEVICES][C.UMAD_CA_NAME_LEN]byte
-		hcas = make([]string, 0, C.UMAD_MAX_DEVICES)
-	)
+	var buf [C.UMAD_MAX_DEVICES][C.UMAD_CA_NAME_LEN]byte
 
 	// Call umad_get_cas_names with pointer to first element in our buffer
-	numHCAs := C.umad_get_cas_names((*[C.UMAD_CA_NAME_LEN]C.char)(unsafe.Pointer(&buf[0])), C.UMAD_MAX_DEVICES)
+	cas_found := C.umad_get_cas_names((*[C.UMAD_CA_NAME_LEN]C.char)(unsafe.Pointer(&buf[0])),
+		C.UMAD_MAX_DEVICES)
 
-	for x := 0; x < int(numHCAs); x++ {
-		hcas = append(hcas, strings.TrimRight(string(buf[x][:]), "\x00"))
+	hcas := make([]string, 0, cas_found)
+	for x := 0; x < int(cas_found); x++ {
+		hcas = append(hcas, string(bytes.TrimRight(buf[x][:], "\x00")))
 	}
 
 	return hcas
