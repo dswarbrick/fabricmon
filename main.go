@@ -86,7 +86,7 @@ func main() {
 	shutdownChan := make(chan bool)
 
 	// Setup signal handler to catch SIGINT, SIGTERM.
-	sigChan := make(chan os.Signal)
+	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, unix.SIGINT, unix.SIGTERM)
 	go func() {
 		s := <-sigChan
