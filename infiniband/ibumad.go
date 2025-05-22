@@ -14,7 +14,7 @@
 package infiniband
 
 // #cgo CFLAGS: -I/usr/include/infiniband
-// #cgo LDFLAGS: -libmad -libumad
+// #cgo LDFLAGS: -libumad
 // #include <umad.h>
 import "C"
 
@@ -22,17 +22,6 @@ import (
 	"strings"
 	"unsafe"
 )
-
-// UmadInit simply wraps the libibumad umad_init() function.
-func UmadInit() int {
-	return int(C.umad_init())
-}
-
-// UmadDone simply wraps the libibumad umad_done() function.
-func UmadDone() {
-	// NOTE: ibsim indicates that FabricMon is not "disconnecting" when it exits - resource leak?
-	C.umad_done()
-}
 
 // UmadGetCANames returns a slice of CA names, as retrieved by libibumad. This function must be
 // used when running FabricMon under ibsim, since the libumad2sim.so does not intercept Go's use
@@ -51,4 +40,18 @@ func umadGetCANames() []string {
 	}
 
 	return hcas
+}
+
+// UmadDone wraps the umad_done() function. Under the hood, umad_done() does nothing.
+//
+// Deprecated.
+func UmadDone() int {
+	return int(C.umad_done())
+}
+
+// UmadInit wraps the umad_init() function. Since rdma-core v26.0, umad_init() does nothing.
+//
+// Deprecated.
+func UmadInit() int {
+	return int(C.umad_init())
 }
