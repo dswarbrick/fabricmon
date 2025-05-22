@@ -9,6 +9,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -82,16 +83,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Channel to signal goroutines that we are shutting down.
-	shutdownChan := make(chan bool)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	// Setup signal handler to catch SIGINT, SIGTERM.
-	sigChan := make(chan os.Signal)
+	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, unix.SIGINT, unix.SIGTERM)
 	go func() {
 		s := <-sigChan
 		slog.Debug("shutting down due to signal", "signal", s)
-		close(shutdownChan)
+		cancel()
 	}()
 
 	// Initialize empty slice to hold writers
@@ -127,7 +127,7 @@ func main() {
 				for _, hca := range hcas {
 					hca.NetDiscover(splitter, conf.Mkey, conf.ResetThreshold)
 				}
-			case <-shutdownChan:
+			case <-ctx.Done():
 				slog.Debug("shutdown received in polling loop")
 				break Loop
 			}
