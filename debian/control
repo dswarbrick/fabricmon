@@ -1,0 +1,35 @@
+Source: fabricmon
+Section: golang
+Priority: optional
+Maintainer: Daniel Swarbrick <dswarbrick@users.noreply.github.com>
+Rules-Requires-Root: no
+Build-Depends: debhelper-compat (= 13),
+               dh-sequence-golang,
+               golang-github-fsnotify-fsnotify-dev,
+               golang-github-influxdb-influxdb-dev,
+               golang-go (>= 2:1.22~),
+               golang-golang-x-sys-dev,
+               golang-gopkg-alecthomas-kingpin.v2-dev,
+               golang-gopkg-yaml.v3-dev,
+               libibmad-dev (>= 26.0),
+               libibnetdisc-dev (>= 26.0),
+               libibumad-dev (>= 26.0),
+               libopensm-dev,
+Testsuite: autopkgtest-pkg-go
+Standards-Version: 4.7.0
+Vcs-Browser: https://github.com/dswarbrick/fabricmon
+Vcs-Git: https://github.com/dswarbrick/fabricmon.git
+Homepage: https://github.com/dswarbrick/fabricmon
+XS-Go-Import-Path: github.com/dswarbrick/fabricmon
+
+Package: fabricmon
+Section: net
+Architecture: any
+Depends: daemon | systemd-sysv,
+         ${misc:Depends},
+         ${shlibs:Depends},
+Built-Using: ${misc:Built-Using},
+Description: InfiniBand performance monitoring daemon
+ FabricMon is an InfiniBand performance monitoring daemon written in Go. It
+ uses cgo to interface with the OFED C libraries and sends MAD datagrams to
+ obtain performance / error counters from all switchports in a fabric.

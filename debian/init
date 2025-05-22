@@ -1,0 +1,54 @@
+#!/bin/sh
+if [ true != "$INIT_D_SCRIPT_SOURCED" ] ; then
+    set "$0" "$@"; INIT_D_SCRIPT_SOURCED=true . /lib/init/init-d-script
+fi
+### BEGIN INIT INFO
+# Provides:          fabricmon
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: FabricMon InfiniBand monitoring daemon
+# Description:       InfiniBand performance monitoring daemon, written in Go.
+### END INIT INFO
+
+# Author: Daniel Swarbrick <dswarbrick@users.noreply.github.com>
+
+DESC="FabricMon InfiniBand monitoring daemon"
+DAEMON=/usr/bin/fabricmon
+NAME=fabricmon
+
+ARGS="--config=/etc/fabricmon/fabricmon.yml --daemonize"
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+
+HELPER=/usr/bin/daemon
+HELPER_ARGS="--name=$NAME"
+
+do_start_cmd()
+{
+    # Return
+    #   0 if daemon has been started
+    #   1 if daemon was already running
+    #   2 if daemon could not be started
+    $HELPER $HELPER_ARGS --running && return 1
+    $HELPER $HELPER_ARGS -- $DAEMON $ARGS || return 2
+    return 0
+}
+
+do_stop_cmd()
+{
+    # Return
+    #   0 if daemon has been stopped
+    #   1 if daemon was already stopped
+    #   2 if daemon could not be stopped
+    #   other if a failure occurred
+    $HELPER $HELPER_ARGS --running || return 1
+    $HELPER $HELPER_ARGS --stop || return 2
+    # wait for the process to really terminate
+    for n in 1 2 3 4 5; do
+        sleep 1
+        $HELPER $HELPER_ARGS --running || break
+    done
+    $HELPER $HELPER_ARGS --running || return 0
+    return 2
+}
