@@ -1,3 +1,13 @@
+fabricmon (0.2.1-1) unstable; urgency=medium
+
+  * Remove unused getCANames function
+  * Mark UmadInit / UmadDone wrapper functions deprecated
+  * Use modern umad_get_ca_device_list to get CA names
+  * Use buffered channel for signal handler
+  * Replace shutdownChan with cancelable context
+
+ -- Daniel Swarbrick <dswarbrick@debian.org>  Thu, 22 May 2025 16:48:04 +0000
+
 fabricmon (0.2.0) unstable; urgency=medium
 
   * Migrate from logrus to Go standard library log/slog
